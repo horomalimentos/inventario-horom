@@ -1,16 +1,20 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
+const path = require("path"); // 👈 IMPORTANTE para servir archivos estáticos
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// Conexión a MongoDB
-mongoose.connect("mongodb://localhost:27017/usuarios", {
+// 🔥 Servir archivos HTML, CSS, JS de tu proyecto
+app.use(express.static(path.join(__dirname)));
+
+// Conexión a MongoDB Atlas
+mongoose.connect("mongodb+srv://horomalimentos:Pelon93.@cluster0.gizie9z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log("✅ Conectado a MongoDB"))
+}).then(() => console.log("✅ Conectado a MongoDB Atlas"))
 .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
 // Definir esquemas
@@ -170,8 +174,6 @@ app.delete("/eliminar-usuario/:id", async (req, res) => {
 
 // Iniciar servidor
 const PORT = process.env.PORT || 3000;
-
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
 });
-
