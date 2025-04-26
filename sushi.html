@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Inventario Área Sushi</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 20px;
+      text-align: center;
+    }
+    h2 {
+      margin-bottom: 20px;
+    }
+    table {
+      width: 90%;
+      margin: 0 auto;
+      border-collapse: collapse;
+      font-size: 15px;
+    }
+    th, td {
+      padding: 8px;
+      border: 1px solid #ccc;
+      text-align: center;
+    }
+    th {
+      background-color: #f2f2f2;
+    }
+    input[type="number"], input[type="checkbox"] {
+      padding: 5px;
+      font-size: 14px;
+      text-align: center;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+    button {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 15px;
+      background-color: #28a745;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #218838;
+    }
+    .mensaje {
+      margin-top: 15px;
+      font-size: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Inventario Área Sushi 🍣</h2>
+
+<form id="formulario-sushi">
+  <table>
+    <thead>
+      <tr>
+        <th>Artículo</th>
+        <th>Cantidad</th>
+        <th>Solicito</th>
+      </tr>
+    </thead>
+    <tbody id="tabla-articulos"></tbody>
+  </table>
+
+  <button type="submit" id="btn-guardar">Guardar Inventario</button>
+</form>
+
+<div class="mensaje" id="mensaje"></div>
+
+<script>
+const articulos = [
+  "LECHERA", "VINAGRE BLAN", "VINAGRE MAN", "AJONJOLI", "COCO RAYAD", "FILMICO",
+  "PLATO HAM", "AGUACATE", "KIWI", "MANZANA", "PEPINO", "GALLETA MOLIDA",
+  "ALGA", "ARROS SUSHI", "KANIKAMA", "MAKISO", "PANCO", "RAMEN", "SIRACHA",
+  "SURIMI", "CAMARON 36", "SALMON", "FRESA", "MANGO"
+];
+
+const tabla = document.getElementById("tabla-articulos");
+
+articulos.forEach((nombre, index) => {
+  const fila = document.createElement("tr");
+  fila.innerHTML = `
+    <td>${nombre}</td>
+    <td><input type="number" min="0" id="input-cantidad-${index}" autocomplete="off"></td>
+    <td><input type="checkbox" id="input-solicito-${index}"></td>
+  `;
+  tabla.appendChild(fila);
+});
+
+const inputsCantidad = Array.from(document.querySelectorAll('input[type="number"]'));
+
+inputsCantidad.forEach((input, index) => {
+  input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (index + 1 < inputsCantidad.length) inputsCantidad[index + 1].focus();
+      else document.getElementById("btn-guardar").focus();
+    }
+  });
+});
+
+// Advertencia si intenta cerrar sin guardar
+window.addEventListener('beforeunload', function (e) {
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+document.getElementById("formulario-sushi").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const mensaje = document.getElementById("mensaje");
+  const datosUsuario = JSON.parse(localStorage.getItem("tempDatos"));
+
+  if (!datosUsuario) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ No se encontraron los datos del usuario.";
+    return;
+  }
+
+  const datos = {};
+  let capturado = false;
+  let camposIncompletos = false;
+
+  articulos.forEach((nombre, index) => {
+    const cantidadTexto = document.getElementById(`input-cantidad-${index}`).value.trim();
+    const solicito = document.getElementById(`input-solicito-${index}`).checked ? "si" : "no";
+
+    if (cantidadTexto === "") {
+      camposIncompletos = true;
+      return;
+    }
+
+    const cantidad = parseInt(cantidadTexto);
+
+    datos[nombre] = {
+      cantidad: cantidad,
+      solicito: solicito
+    };
+    capturado = true;
+  });
+
+  if (camposIncompletos) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Completa todas las cantidades antes de guardar.";
+    return;
+  }
+
+  if (!capturado) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Ingresa al menos una cantidad.";
+    return;
+  }
+
+  try {
+    if (datosUsuario.modoEdicion) {
+      // MODO EDICIÓN
+      await fetch(`http://localhost:3000/editar-nombre/${datosUsuario.id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ articulos: datos, usuario: datosUsuario.usuario })
+      });
+    } else {
+      // NUEVO REGISTRO
+      await fetch("http://localhost:3000/guardar-nombre", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          ...datosUsuario,
+          articulos: datos
+        })
+      });
+    }
+
+    mensaje.style.color = "green";
+    mensaje.textContent = "✅ Inventario guardado exitosamente.";
+
+    // 🔥 AVISAR A OTRAS PÁGINAS
+    localStorage.setItem("actualizarInventario", "true");
+    setTimeout(() => {
+      localStorage.removeItem("actualizarInventario");
+    }, 500);
+
+    localStorage.removeItem("tempDatos");
+    window.removeEventListener('beforeunload', () => {});
+
+    setTimeout(() => {
+      window.close();
+    }, 1000);
+
+  } catch (error) {
+    console.error(error);
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Error al guardar el inventario.";
+  }
+});
+</script>
+
+</body>
+</html>

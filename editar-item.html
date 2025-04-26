@@ -1,0 +1,21 @@
+<!DOCTYPE html>
+<html lang="es">
+<head><meta charset="UTF-8"><title>Editar Artículo</title>
+<style>body{font-family:Arial;text-align:center;padding:20px;}input,button{padding:10px;margin:5px;}</style>
+</head>
+<body>
+<h2 id="nombre"></h2>
+<input id="cantidad" type="number" placeholder="Cantidad">
+<button onclick="guardar()">Guardar</button><div id="msg"></div>
+
+<script>
+const datos=JSON.parse(localStorage.getItem("tempDatos"));
+nombre.textContent=datos.articulo;
+
+async function guardar(){
+await fetch(`http://localhost:3000/editar-articulo/${datos.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
+body:JSON.stringify({articulo:datos.articulo,cantidad:cantidad.value,usuario:datos.usuario})});
+msg.textContent="✅ Artículo actualizado.";
+setTimeout(()=>window.close(),1000);
+}
+</script></body></html>

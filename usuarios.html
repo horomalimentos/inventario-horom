@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8"><title>Gestión Usuarios</title>
+  <style>
+    body {font-family:Arial;text-align:center;padding:20px;}
+    table {margin:auto;width:70%;border-collapse:collapse;}
+    th, td {border:1px solid #ccc;padding:8px;}
+    input,button {padding:6px;border-radius:5px;border:1px solid #ccc;}
+    button {background-color:#3498db;color:white;cursor:pointer;border:none;}
+    button:hover {background-color:#2980b9;}
+  </style>
+</head>
+<body>
+  <h2>Gestión de Usuarios</h2>
+  <input id="nuevoUsuario" placeholder="Usuario">
+  <input id="nuevaPass" placeholder="Contraseña" type="password">
+  <button onclick="agregar()">Agregar Usuario</button><br><br>
+  
+  <table>
+    <thead><tr><th>Usuario</th><th>Nueva Contraseña</th><th>Modificar</th><th>Eliminar</th></tr></thead>
+    <tbody id="tabla"></tbody>
+  </table>
+
+  <script>
+    async function cargar(){
+      const users=await fetch("http://localhost:3000/usuarios-registrados").then(r=>r.json());
+      tabla.innerHTML=users.map(u=>`
+        <tr><td>${u.usuario}</td>
+        <td><input type="password" id="p${u._id}" placeholder="Contraseña nueva"></td>
+        <td><button onclick="modificar('${u._id}')">Modificar</button></td>
+        <td><button onclick="eliminar('${u._id}')">Eliminar</button></td></tr>`).join("");
+    }
+
+    async function agregar(){
+      await fetch("http://localhost:3000/nuevo-usuario",{method:"POST",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({usuario:nuevoUsuario.value,contraseña:nuevaPass.value})});
+      cargar();
+    }
+
+    async function modificar(id){
+      await fetch(`http://localhost:3000/modificar-usuario/${id}`,{method:"PUT",
+      headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({contraseña:document.getElementById(`p${id}`).value})});
+      cargar();
+    }
+
+    async function eliminar(id){
+      if(confirm("¿Eliminar usuario?")){
+        await fetch(`http://localhost:3000/eliminar-usuario/${id}`,{method:"DELETE"});
+        cargar();
+      }
+    }
+    cargar();
+  </script>
+</body>
+</html>

@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Compras Inventarios</title>
+  <style>
+    body {font-family: Arial, sans-serif; margin: 20px;}
+    h2 {text-align: center; margin-bottom: 20px;}
+    #filtros {text-align: center;}
+    table {width: 100%; border-collapse: collapse; margin-top: 20px;}
+    th, td {padding: 10px; border: 1px solid #ccc; text-align: center;}
+    th {background-color: #f2f2f2; cursor: pointer;}
+    input[type="date"], button {padding: 10px; margin: 10px; font-size: 16px;}
+    button {background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;}
+    button:hover {background-color: #2980b9;}
+  </style>
+</head>
+<body>
+
+<h2>Compras Inventarios 📦</h2>
+
+<div id="filtros">
+  <label for="fecha">Selecciona Fecha:</label>
+  <input type="date" id="fecha">
+  <button onclick="descargarPDF()">Descargar en PDF</button>
+</div>
+
+<table id="tabla-compras">
+  <thead>
+    <tr>
+      <th onclick="ordenarTabla(0)">Fecha 📅</th>
+      <th onclick="ordenarTabla(1)">Usuario 👤</th>
+      <th onclick="ordenarTabla(2)">Ubicación 📍</th>
+      <th onclick="ordenarTabla(3)">Área 🍣📦👨‍🍳</th>
+      <th onclick="ordenarTabla(4)">Proveedor 🏪</th>
+      <th onclick="ordenarTabla(5)">Artículo 🛒</th>
+      <th onclick="ordenarTabla(6)">Solicito ✅</th>
+      <th onclick="ordenarTabla(7)">Anapra 📍</th>
+      <th onclick="ordenarTabla(8)">Zapata 📍</th>
+    </tr>
+  </thead>
+  <tbody id="compras-body"></tbody>
+</table>
+
+<!-- Librería html2pdf.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+<script>
+// Variables
+let inventarios = [];
+let ordenAsc = true;
+
+// Tu lista de proveedores aquí (como la que ya tenías)
+const proveedores = {
+  // (tu lista de proveedores aquí)
+};
+
+// Funciones principales
+async function cargarInventarios() {
+  const res = await fetch("http://localhost:3000/nombres");
+  inventarios = await res.json();
+}
+
+function mostrarCompras() {
+  const fechaFiltro = document.getElementById("fecha").value;
+  const tbody = document.getElementById("compras-body");
+  tbody.innerHTML = "";
+
+  if (!fechaFiltro) return;
+
+  let encontrados = false;
+
+  inventarios.forEach(inv => {
+    const fechaInv = new Date(inv.creadoEn);
+    const fechaInvISO = fechaInv.toISOString().slice(0, 10); // yyyy-mm-dd
+    const fechaFiltroISO = fechaFiltro; // ya es yyyy-mm-dd
+
+    if (fechaInvISO !== fechaFiltroISO) return;
+
+    encontrados = true;
+
+    if (inv.articulos) {
+      for (const [articulo, data] of Object.entries(inv.articulos)) {
+        const solicito = data.solicito || "no";
+        const cantidad = data.cantidad ?? 0;
+
+        let cantidadAnapra = "-";
+        let cantidadZapata = "-";
+
+        if (inv.ubicacion === "Anapra") cantidadAnapra = cantidad;
+        if (inv.ubicacion === "Zapata") cantidadZapata = cantidad;
+
+        const proveedor = proveedores[articulo] || "OTRO";
+
+        tbody.innerHTML += `
+          <tr>
+            <td>${fechaInv.toLocaleDateString()}</td>
+            <td>${inv.nombre}</td>
+            <td>${inv.ubicacion}</td>
+            <td>${inv.area}</td>
+            <td>${proveedor}</td>
+            <td>${articulo}</td>
+            <td>${solicito === "si" ? "✅" : "❌"}</td>
+            <td>${cantidadAnapra}</td>
+            <td>${cantidadZapata}</td>
+          </tr>
+        `;
+      }
+    }
+  });
+
+  if (!encontrados) {
+    tbody.innerHTML = `<tr><td colspan="9">⚠️ No se encontraron resultados para esta fecha.</td></tr>`;
+  }
+}
+
+function ordenarTabla(n) {
+  const table = document.getElementById("tabla-compras");
+  let switching = true;
+  let dir = ordenAsc ? "asc" : "desc";
+  ordenAsc = !ordenAsc;
+
+  while (switching) {
+    switching = false;
+    const rows = table.rows;
+    for (let i = 1; i < (rows.length - 1); i++) {
+      let shouldSwitch = false;
+      let x = rows[i].getElementsByTagName("TD")[n];
+      let y = rows[i + 1].getElementsByTagName("TD")[n];
+      let xContent = x.innerText.toLowerCase();
+      let yContent = y.innerText.toLowerCase();
+
+      if (!isNaN(xContent) && !isNaN(yContent)) {
+        xContent = parseFloat(xContent);
+        yContent = parseFloat(yContent);
+      }
+
+      if (dir === "asc" && xContent > yContent) shouldSwitch = true;
+      if (dir === "desc" && xContent < yContent) shouldSwitch = true;
+
+      if (shouldSwitch) {
+        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+        switching = true;
+        break;
+      }
+    }
+  }
+}
+
+function descargarPDF() {
+  const fechaInput = document.getElementById("fecha").value;
+  if (!fechaInput) {
+    alert("⚠️ Por favor selecciona una fecha primero.");
+    return;
+  }
+
+  const fecha = new Date(fechaInput);
+  const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
+  const fechaFormateada = fecha.toLocaleDateString('es-ES', opciones)
+    .replace(",", "")
+    .replace(/\b\w/g, c => c.toUpperCase());
+
+  const opt = {
+    margin: 0.3,
+    filename: `Compras_${fechaFormateada.replace(/\s/g, "_")}.pdf`,
+    image: { type: 'jpeg', quality: 0.98 },
+    html2canvas: { scale: 2 },
+    jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
+  };
+
+  html2pdf().from(document.getElementById("tabla-compras")).set(opt).save();
+}
+
+// Inicializar
+cargarInventarios();
+document.getElementById("fecha").addEventListener("change", mostrarCompras);
+
+window.addEventListener("storage", function(e) {
+  if (e.key === "actualizarInventario" && e.newValue === "true") {
+    cargarInventarios();
+  }
+});
+</script>
+
+</body>
+</html>

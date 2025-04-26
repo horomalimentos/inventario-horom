@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Historial de Modificaciones</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
+    select, button { padding: 10px; margin: 10px; width: 300px; border: 1px solid #ccc; border-radius: 5px; }
+    table { margin: auto; margin-top: 20px; border-collapse: collapse; width: 80%; }
+    th, td { border: 1px solid #ccc; padding: 10px; }
+    th { background-color: #f2f2f2; }
+    h2 { margin-bottom: 20px; }
+  </style>
+</head>
+<body>
+
+<h2>Historial de Modificaciones 📋</h2>
+
+<select id="inventario-select">
+  <option value="" disabled selected>Selecciona un Inventario</option>
+</select>
+
+<button onclick="mostrarHistorial()">Ver Historial</button>
+
+<table id="tabla-historial" style="display:none;">
+  <thead>
+    <tr>
+      <th>Usuario</th>
+      <th>Acción</th>
+      <th>Fecha y Hora</th>
+    </tr>
+  </thead>
+  <tbody id="historial-body"></tbody>
+</table>
+
+<script>
+let inventarios = [];
+
+async function cargarInventarios() {
+  const res = await fetch("http://localhost:3000/nombres");
+  inventarios = await res.json();
+  const select = document.getElementById("inventario-select");
+  select.innerHTML = '<option value="" disabled selected>Selecciona un Inventario</option>';
+  
+  inventarios.forEach(inv => {
+    const fecha = new Date(inv.creadoEn).toLocaleDateString();
+    select.innerHTML += `<option value="${inv._id}">${fecha} - ${inv.ubicacion} - ${inv.area}</option>`;
+  });
+}
+
+async function mostrarHistorial() {
+  const id = document.getElementById("inventario-select").value;
+  if (!id) return alert("Selecciona un inventario primero.");
+
+  const inventario = inventarios.find(i => i._id === id);
+
+  const tbody = document.getElementById("historial-body");
+  tbody.innerHTML = "";
+
+  if (!inventario.historial || inventario.historial.length === 0) {
+    tbody.innerHTML = `<tr><td colspan="3">Sin modificaciones registradas.</td></tr>`;
+  } else {
+    inventario.historial.forEach(h => {
+      const fecha = new Date(h.fecha).toLocaleString();
+      tbody.innerHTML += `<tr><td>${h.usuario}</td><td>${h.accion}</td><td>${fecha}</td></tr>`;
+    });
+  }
+
+  document.getElementById("tabla-historial").style.display = "table";
+}
+
+cargarInventarios();
+</script>
+
+</body>
+</html>

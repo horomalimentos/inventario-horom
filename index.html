@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Captura de Inventario</title>
+  <style>
+    body {font-family: Arial, sans-serif; text-align: center; margin: 50px;}
+    form {display: inline-block; background: #f9f9f9; padding: 20px; border: 1px solid #ccc; border-radius: 10px;}
+    input, select, button {width: 300px; padding: 10px; margin: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc;}
+    button {background-color: #3498db; color: white; cursor: pointer; border: none;}
+    button:hover {background-color: #2980b9;}
+    #mensaje {margin-top: 20px; font-size: 16px;}
+    .modal {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); text-align: center; padding-top: 80px; z-index: 1000;
+    }
+    .modal-content {
+      background: white; margin: auto; padding: 20px; border-radius: 10px; width: 350px;
+    }
+    .modal-content input, .modal-content button, .modal-content select {width: 80%; margin: 10px;}
+  </style>
+</head>
+<body>
+
+<h2>Capturar Registro de Inventario</h2>
+
+<form id="formulario">
+  <select id="usuario" required><option selected disabled>Cargando usuarios...</option></select><br>
+  <input type="password" id="usuario-pass" placeholder="Contraseña del Usuario" required><br>
+  <select id="ubicacion" required>
+    <option disabled selected>Selecciona Ubicación</option>
+    <option value="Zapata">Zapata</option>
+    <option value="Anapra">Anapra</option>
+  </select><br>
+  <select id="area" required>
+    <option disabled selected>Selecciona Área</option>
+    <option value="Sushi">Sushi</option>
+    <option value="Caja">Caja</option>
+    <option value="Cocina">Cocina</option>
+  </select><br>
+  <button type="submit">Continuar</button>
+</form>
+
+<br><br>
+<button onclick="mostrarModalGestion()">Gestionar Usuarios</button>
+<button onclick="mostrarModalCambio()">Cambiar Supercontraseña</button>
+<button onclick="verInventarios()">Ver Inventarios</button>
+
+<div id="mensaje"></div>
+
+<!-- Modal Gestionar Usuarios -->
+<div id="modal-gestion" class="modal">
+  <div class="modal-content">
+    <h3>Contraseña de Gestión</h3>
+    <input type="password" id="pass-gestion" placeholder="Introduce contraseña"><br>
+    <button onclick="validarGestion()">Acceder</button><br>
+    <button onclick="cerrarModalGestion()" style="background-color: #e74c3c;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal Cambiar Supercontraseña -->
+<div id="modal-cambio" class="modal">
+  <div class="modal-content">
+    <h3>Cambiar Supercontraseña</h3>
+    <input type="password" id="pass-actual" placeholder="Contraseña Actual"><br>
+    <input type="password" id="pass-nueva" placeholder="Nueva Contraseña"><br>
+    <button onclick="cambiarSuper()">Cambiar</button><br>
+    <button onclick="cerrarModalCambio()" style="background-color: #e74c3c;">Cancelar</button>
+  </div>
+</div>
+
+<!-- Modal Seleccionar Artículo -->
+<div id="modal-articulo" class="modal">
+  <div class="modal-content">
+    <h3>¿Qué artículo deseas modificar?</h3>
+    <select id="select-articulo">
+      <option disabled selected>Selecciona artículo</option>
+    </select><br>
+    <button onclick="abrirEdicionArticulo()">Modificar</button><br>
+    <button onclick="cerrarModalArticulo()" style="background-color: #e74c3c;">Cancelar</button>
+  </div>
+</div>
+
+<script>
+let inventarios = [];
+let datosPendientes = {};
+let superContraseña = "Pelon93."; // Supercontraseña inicial
+
+async function cargarUsuarios() {
+  try {
+    const res = await fetch("http://localhost:3000/usuarios-registrados");
+    const usuarios = await res.json();
+    const select = document.getElementById("usuario");
+    select.innerHTML = '<option disabled selected>Selecciona Usuario</option>';
+    usuarios.forEach(u => {
+      select.innerHTML += `<option value="${u.usuario}">${u.usuario}</option>`;
+    });
+  } catch (error) {
+    console.error("Error al cargar usuarios:", error);
+  }
+}
+
+async function cargarInventarios() {
+  try {
+    const res = await fetch("http://localhost:3000/nombres");
+    inventarios = await res.json();
+  } catch (error) {
+    console.error("Error al cargar inventarios:", error);
+  }
+}
+
+cargarUsuarios();
+cargarInventarios();
+
+document.getElementById("formulario").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  
+  const usuario = document.getElementById("usuario").value;
+  const contraseña = document.getElementById("usuario-pass").value;
+  const ubicacion = document.getElementById("ubicacion").value;
+  const area = document.getElementById("area").value;
+  const mensaje = document.getElementById("mensaje");
+
+  if (!usuario || !contraseña || !ubicacion || !area) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Todos los campos son obligatorios.";
+    return;
+  }
+
+  try {
+    const res = await fetch("http://localhost:3000/validar-usuario", {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({usuario, contraseña})
+    });
+    const data = await res.json();
+    if (!data.valido) {
+      mensaje.style.color = "red";
+      mensaje.textContent = "❌ Usuario o contraseña incorrectos.";
+      return;
+    }
+
+    const hoy = new Date().toISOString().split('T')[0];
+    const existe = inventarios.find(inv => {
+      const fecha = new Date(inv.creadoEn).toISOString().split('T')[0];
+      return fecha === hoy && inv.ubicacion === ubicacion && inv.area === area;
+    });
+
+    datosPendientes = { nombre: usuario, ubicacion, area, usuario };
+
+    if (existe) {
+      // Pide otra vez contraseña antes de corregir
+      const nuevaClave = prompt("⚠️ Ya existe inventario. Reconfirma tu contraseña:");
+      if (nuevaClave !== contraseña) {
+        alert("❌ Contraseña incorrecta.");
+        return;
+      }
+      datosPendientes.id = existe._id;
+      datosPendientes.modoEdicion = true;
+      cargarArticulos(area);
+      document.getElementById("modal-articulo").style.display = "block";
+    } else {
+      datosPendientes.modoEdicion = false;
+      localStorage.setItem("tempDatos", JSON.stringify(datosPendientes));
+      mensaje.style.color = "green";
+      mensaje.textContent = "✅ Redirigiendo...";
+      setTimeout(() => {
+        window.open(`${area.toLowerCase()}.html`, "_blank");
+      }, 500);
+    }
+  } catch (error) {
+    console.error("Error al validar:", error);
+  }
+});
+
+function cargarArticulos(area) {
+  const articulos = {
+    "Sushi": ["LECHERA","VINAGRE BLAN","VINAGRE MAN","AJONJOLI","COCO RAYAD","FILMICO","PLATO HAM","AGUACATE","KIWI","MANZANA","PEPINO","GALLETA MOLIDA","ALGA","ARROS SUSHI","KANIKAMA","MAKISO","PANCO","RAMEN","SIRACHA","SURIMI","CAMARON 36","SALMON","FRESA","MANGO"],
+    "Caja": ["CONO CHICO","CONO GDE","QUESOCREMA","COCA VIDRIO","COCACOLA","COCACOLA 2L","FANTA","FRESCA","MANZANITA","SPRITE","RANCH","AGUA 1LT","BOLSA CAM","BOLSA DE KG","SERVILLETAS","TENEDOR","CURTIDOS NACHOS GDE","QUESO AMAR","ESCOBA","PAPEL BAÑO","RAID MOSC","LIMON","HAPPY BOX","MINI BOX","CHAROLA","TAKIS","ANGUILA","SALSA HABANERO","TARTARA","PALILLOS","COFIAS","CLORO","FABULOSO","JABON","ROLLO IMPRE"],
+    "Cocina": ["AROS DE CEBOLLA","BISTEK PICADO","DEDOS DE Q","TOCINO","SALCHICHA","ARROZ MEX","AZUCAR","HARINA","HUEVO","MAIZENA","PIMIENTA","SAL","BBQ","BUFALO","KETCHUP STARVALUE","MANGO HABAN","MAYONESA STARVALUE","AJO","AJO MOLIDO","ANIS","CHIL ARBOL","GENGIBRE","ALUMINIO GDE","PAPEL CEBOLLA","PIEDRA PLANCHA","PLATO 7","TAPA 1 LT","TAPA 2 OZ","VASO 1 LT","VASO 2 OZ","CHIPOTLE LATA GDE","KETCHUP HUNTS","BOLSA NEGR","DESENGRASANTE","FIBRAS","PAPEL CANELA","TRAPEADOR","CALABAZA","CEBOLLA","CEBOLLIN","HABANERO","JALAPEÑO","MORRON AM","MORRON VE","PAPA COSTAL","ZANAHORIA","CONCENTRADO SAMBAL","ACEITE","COLORANTE","PARMESANO","PIMI LIMON","AJINOMOTO","DASHI","SOYA KIKOMA","SOYA LUCKY","TOGARACHI","ALITAS","PAPA BOLSA","PECHUGA","PUERCO","TRAPOS","ENCENDEDOR","BROCOLI"]
+  };
+
+  const select = document.getElementById("select-articulo");
+  select.innerHTML = '<option disabled selected>Selecciona artículo</option>';
+  articulos[area].forEach(a => {
+    select.innerHTML += `<option value="${a}">${a}</option>`;
+  });
+}
+
+function abrirEdicionArticulo() {
+  const articulo = document.getElementById("select-articulo").value;
+  if (!articulo) {
+    alert("❌ Debes seleccionar un artículo.");
+    return;
+  }
+  datosPendientes.articulo = articulo;
+  localStorage.setItem("tempDatos", JSON.stringify(datosPendientes));
+  window.open("editar-item.html", "_blank");
+  document.getElementById("modal-articulo").style.display = "none";
+}
+
+function cerrarModalArticulo() {
+  document.getElementById("modal-articulo").style.display = "none";
+}
+
+function mostrarModalGestion() {
+  document.getElementById("modal-gestion").style.display = "block";
+}
+
+function cerrarModalGestion() {
+  document.getElementById("modal-gestion").style.display = "none";
+}
+
+function validarGestion() {
+  const clave = document.getElementById("pass-gestion").value;
+  if (clave === superContraseña) {
+    window.open("usuarios.html", "_blank");
+    cerrarModalGestion();
+  } else {
+    alert("❌ Contraseña incorrecta.");
+  }
+}
+
+function mostrarModalCambio() {
+  document.getElementById("modal-cambio").style.display = "block";
+}
+
+function cerrarModalCambio() {
+  document.getElementById("modal-cambio").style.display = "none";
+}
+
+function cambiarSuper() {
+  const actual = document.getElementById("pass-actual").value;
+  const nueva = document.getElementById("pass-nueva").value;
+
+  if (actual !== superContraseña) {
+    alert("❌ Contraseña actual incorrecta.");
+    return;
+  }
+  if (!nueva || nueva.length < 4) {
+    alert("❌ La nueva contraseña debe tener mínimo 4 caracteres.");
+    return;
+  }
+  superContraseña = nueva;
+  alert("✅ Supercontraseña cambiada correctamente.");
+  cerrarModalCambio();
+}
+
+function verInventarios() {
+  window.open("ver-nombres.html", "_blank");
+}
+</script>
+
+</body>
+<script>
+  // Actualizar página automáticamente cuando haya cambios en otras ventanas
+  window.addEventListener("storage", function(e) {
+    if (e.key === "actualizarInventario" && e.newValue === "true") {
+      console.log("🔄 Cambio detectado, actualizando página...");
+      location.reload();
+    }
+  });
+  </script>
+  
+
+</html>
