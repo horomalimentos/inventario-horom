@@ -1,21 +1,21 @@
 const express = require("express");
 const mongoose = require("mongoose");
 const cors = require("cors");
-const path = require("path"); // 👈 IMPORTANTE para servir archivos estáticos
+const path = require("path");
 
 const app = express();
 app.use(express.json());
 app.use(cors());
 
-// 🔥 Servir archivos HTML, CSS, JS de tu proyecto
-app.use(express.static(path.join(__dirname)));
+// Hacer pública la carpeta donde estarán los archivos HTML
+app.use(express.static(path.join(__dirname, 'public')));
 
-// Conexión a MongoDB Atlas
-mongoose.connect("mongodb+srv://horomalimentos:Pelon93.@cluster0.gizie9z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
+// Conexión a MongoDB (ahora usando tu conexión en la nube, no localhost)
+mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://horomalimentos:Pelon93.@cluster0.gizie9z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
   useNewUrlParser: true,
   useUnifiedTopology: true
-}).then(() => console.log("✅ Conectado a MongoDB Atlas"))
-.catch(err => console.error("❌ Error de conexión a MongoDB:", err));
+}).then(() => console.log("✅ Conectado a MongoDB"))
+  .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
 // Definir esquemas
 const usuarioSchema = new mongoose.Schema({
@@ -49,7 +49,7 @@ app.post("/guardar-nombre", async (req, res) => {
   try {
     const usuario = new Usuario(req.body);
     await usuario.save();
-    res.send(usuario._id); // Devolvemos ID para referencia
+    res.send(usuario._id);
   } catch (error) {
     console.error(error);
     res.status(500).send("❌ Error al guardar inventario");
@@ -171,9 +171,10 @@ app.delete("/eliminar-usuario/:id", async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Ruta para cargar index.html
-app.get("/", (req, res) => {
-  res.sendFile(path.join(__dirname, "index.html"));
+// Ruta para cualquier otro recurso que no exista
+// -------------------------------------------------------------
+app.use((req, res) => {
+  res.status(404).send("❌ Página no encontrada");
 });
 
 // Iniciar servidor
