@@ -2,105 +2,135 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Editar Artículo</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
-    form { display: inline-block; background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #ccc; }
-    input, label, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
-    button { background-color: #3498db; color: white; border: none; cursor: pointer; }
-    button:hover { background-color: #2980b9; }
-    .footer { margin-top: 30px; font-size: 12px; color: gray; }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 30px; }
+    form { background: #f9f9f9; padding: 20px; border: 1px solid #ccc; border-radius: 10px; display: inline-block; width: 100%; max-width: 400px; }
+    input, button, label { width: 90%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #e74c3c; color: white; cursor: pointer; border: none; }
+    button:hover { background-color: #c0392b; }
+    #mensaje { margin-top: 20px; font-size: 16px; }
+    .footer { margin-top: 40px; font-size: 12px; color: gray; }
+    #loader { display: none; margin-top: 15px; font-size: 14px; color: #555; }
+    @media (max-width: 600px) {
+      form { width: 95%; }
+      input, button, label { font-size: 14px; }
+    }
   </style>
 </head>
 <body>
 
-<h2>✏️ Editar Artículo</h2>
+<h2>Editar Artículo ✏️</h2>
+
+<div id="loader">Cargando datos, por favor espera...</div>
 
 <form id="formulario-editar">
-  <label for="cantidad">Cantidad Nueva:</label>
-  <input type="number" id="cantidad" min="0" required placeholder="Ingresa nueva cantidad">
-
-  <label for="solicito">¿Solicitó?</label>
-  <select id="solicito" required>
-    <option value="No">No</option>
-    <option value="Si">Sí</option>
-  </select>
-
-  <label for="usuario-pass">Confirma tu Contraseña:</label>
-  <input type="password" id="usuario-pass" required placeholder="Tu contraseña">
-
+  <div id="articuloInfo"></div>
+  <input type="number" id="nuevaCantidad" placeholder="Nueva Cantidad" required min="0">
+  <div>
+    <label>
+      <input type="checkbox" id="nuevoSolicito">
+      Solicitar
+    </label>
+  </div>
   <button type="submit">Guardar Cambios</button>
+  <button type="button" onclick="regresar()" style="background-color: gray;">Cancelar</button>
 </form>
 
-<div id="mensaje" style="margin-top:20px;font-size:16px;"></div>
+<div id="mensaje"></div>
 
-<div class="footer">
+<footer>
   Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
-</div>
+</footer>
 
 <script>
-const server = "https://inventario-horom-production.up.railway.app";
-let datos = JSON.parse(localStorage.getItem("tempDatos")) || {};
+const SERVER = "https://inventario-horom-production.up.railway.app";
 
-document.getElementById("formulario-editar").addEventListener("submit", async function(e) {
-  e.preventDefault();
-  
-  const cantidad = parseInt(document.getElementById("cantidad").value.trim()) || 0;
-  const solicito = document.getElementById("solicito").value;
-  const contraseña = document.getElementById("usuario-pass").value.trim();
-  const mensaje = document.getElementById("mensaje");
+// Validar login
+if (!localStorage.getItem("usuarioLogueado")) {
+  window.location.href = "login.html";
+}
 
-  if (!cantidad && cantidad !== 0) {
-    mensaje.style.color = "red";
-    mensaje.textContent = "❌ La cantidad no puede estar vacía.";
-    return;
+const datosPendientes = JSON.parse(localStorage.getItem("tempDatos"));
+if (!datosPendientes || !datosPendientes.id || !datosPendientes.articulo) {
+  alert("❌ No se encontraron datos del artículo a editar.");
+  window.location.href = "index.html";
+}
+
+// Mostrar nombre de artículo
+document.getElementById("articuloInfo").innerHTML = `<strong>Artículo:</strong> ${datosPendientes.articulo}`;
+
+// Cargar datos actuales
+async function cargarActual() {
+  const loader = document.getElementById("loader");
+  loader.style.display = "block";
+  try {
+    const res = await fetch(`${SERVER}/nombres`);
+    const inventarios = await res.json();
+    const inventario = inventarios.find(inv => inv._id === datosPendientes.id);
+
+    if (inventario && inventario.articulos && inventario.articulos[datosPendientes.articulo]) {
+      const valor = inventario.articulos[datosPendientes.articulo];
+      const partes = valor.split('|').map(x => x.trim());
+      const cantidadActual = partes[0] || "0";
+      const solicitoActual = (partes[1] || "").includes("Si");
+
+      document.getElementById("nuevaCantidad").value = cantidadActual;
+      document.getElementById("nuevoSolicito").checked = solicitoActual;
+    }
+  } catch (error) {
+    console.error(error);
+    document.getElementById("mensaje").textContent = "❌ Error al cargar datos actuales.";
+  } finally {
+    loader.style.display = "none";
   }
+}
+cargarActual();
 
-  if (!contraseña) {
-    mensaje.style.color = "red";
-    mensaje.textContent = "❌ Debes ingresar tu contraseña.";
+// Guardar cambios
+document.getElementById("formulario-editar").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const nuevaCantidad = document.getElementById("nuevaCantidad").value.trim();
+  const nuevoSolicito = document.getElementById("nuevoSolicito").checked ? "Si" : "No";
+
+  if (nuevaCantidad === "") {
+    alert("❌ No puedes dejar cantidad vacía.");
     return;
   }
 
   try {
-    // Validar usuario nuevamente
-    const res = await fetch(`${server}/validar-usuario`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({ usuario: datos.usuario, contraseña })
-    });
-    const data = await res.json();
-    if (!data.valido) {
-      mensaje.style.color = "red";
-      mensaje.textContent = "❌ Contraseña incorrecta.";
-      return;
-    }
-
-    // Actualizar cantidad y solicitud
-    await fetch(`${server}/editar-articulo/${datos.id}`, {
+    await fetch(`${SERVER}/editar-articulo/${datosPendientes.id}`, {
       method: "PUT",
-      headers: {"Content-Type": "application/json"},
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        articulo: datos.articulo,
-        cantidad: `${cantidad} | Solicito: ${solicito}`,
-        usuario: datos.usuario
+        articulo: datosPendientes.articulo,
+        cantidad: `${nuevaCantidad} | Solicito: ${nuevoSolicito}`,
+        usuario: localStorage.getItem("usuarioLogueado")
       })
     });
 
-    mensaje.style.color = "green";
-    mensaje.textContent = "✅ Artículo actualizado correctamente.";
-    localStorage.removeItem("tempDatos");
+    document.getElementById("mensaje").style.color = "green";
+    document.getElementById("mensaje").textContent = "✅ Artículo actualizado exitosamente.";
+
+    // Actualizar inventarios abiertos
+    localStorage.setItem("actualizarInventario", "true");
 
     setTimeout(() => {
-      window.close();
-    }, 1200);
+      window.location.href = "index.html";
+    }, 1000);
 
   } catch (error) {
-    console.error("❌ Error:", error);
-    mensaje.style.color = "red";
-    mensaje.textContent = "❌ Error al actualizar artículo.";
+    console.error(error);
+    document.getElementById("mensaje").style.color = "red";
+    document.getElementById("mensaje").textContent = "❌ Error al guardar cambios.";
   }
 });
+
+function regresar() {
+  window.location.href = "index.html";
+}
 </script>
 
 </body>
