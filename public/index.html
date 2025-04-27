@@ -3,191 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Captura de Inventario</title>
+  <title>Inicio - Inventario Horom</title>
   <style>
-    body {font-family: Arial, sans-serif; text-align: center; margin: 20px; background: #f9f9f9;}
-    form {background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); margin: auto; max-width: 400px;}
-    input, select, button {width: 90%; padding: 12px; margin: 10px 0; font-size: 16px; border-radius: 6px; border: 1px solid #ccc;}
-    button {background-color: #e74c3c; color: white; border: none; font-weight: bold;}
-    button:hover {background-color: #c0392b;}
-    #mensaje {margin-top: 20px; font-size: 16px;}
-    .modal {display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); padding-top: 80px; z-index: 1000;}
-    .modal-content {background: white; margin: auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px;}
-    footer {margin-top: 40px; font-size: 12px; color: gray;}
-    #loader {display: none; margin-top: 15px; font-size: 14px; color: #555;}
+    body {font-family: Arial, sans-serif; text-align: center; margin: 30px; background: #f9f9f9;}
+    h2 {margin-bottom: 10px;}
+    .loader {display: none; margin: 10px; color: gray;}
+    .boton {display: block; width: 90%; max-width: 300px; margin: 10px auto; padding: 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;}
+    .boton:hover {background-color: #c0392b;}
+    #fecha-hora {margin-top: 10px; font-size: 14px; color: #555;}
+    footer {margin-top: 30px; font-size: 12px; color: gray;}
+    @media (max-width: 600px) {
+      .boton {font-size: 14px; padding: 12px;}
+    }
   </style>
 </head>
 <body>
 
-<h2>Captura de Inventario</h2>
+<h2>Panel Principal - Inventario Horom</h2>
+<div id="fecha-hora"></div>
+<div class="loader" id="loader">Cargando...</div>
 
-<form id="formulario">
-  <select id="usuario" required><option selected disabled>Cargando usuarios...</option></select>
-  <input type="password" id="usuario-pass" placeholder="Contraseña del Usuario" required>
-  <select id="ubicacion" required>
-    <option disabled selected>Selecciona Ubicación</option>
-    <option value="Zapata">Zapata</option>
-    <option value="Anapra">Anapra</option>
-  </select>
-  <select id="area" required>
-    <option disabled selected>Selecciona Área</option>
-    <option value="Sushi">Sushi</option>
-    <option value="Caja">Caja</option>
-    <option value="Cocina">Cocina</option>
-  </select>
-  <button type="submit">Continuar</button>
-</form>
-
-<br>
-<button onclick="mostrarModalGestion()">Gestionar Usuarios</button>
-<button onclick="mostrarModalCambio()">Cambiar Supercontraseña</button>
-<button onclick="verInventarios()">Ver Inventarios</button>
-<button onclick="verCompras()">Compras</button>
-
-<div id="mensaje"></div>
-<div id="loader">Cargando datos, por favor espera...</div>
-
-<div id="modal-gestion" class="modal">
-  <div class="modal-content">
-    <h3>Contraseña de Gestión</h3>
-    <input type="password" id="pass-gestion" placeholder="Introduce contraseña">
-    <button onclick="validarGestion()">Acceder</button>
-    <button onclick="cerrarModalGestion()">Cancelar</button>
-  </div>
-</div>
-
-<div id="modal-cambio" class="modal">
-  <div class="modal-content">
-    <h3>Cambiar Supercontraseña</h3>
-    <input type="password" id="pass-actual" placeholder="Contraseña Actual">
-    <input type="password" id="pass-nueva" placeholder="Nueva Contraseña">
-    <button onclick="cambiarSuper()">Cambiar</button>
-    <button onclick="cerrarModalCambio()">Cancelar</button>
-  </div>
-</div>
-
-<div id="modal-articulo" class="modal">
-  <div class="modal-content">
-    <h3>¿Qué artículo deseas modificar?</h3>
-    <select id="select-articulo">
-      <option disabled selected>Selecciona artículo</option>
-    </select>
-    <button onclick="abrirEdicionArticulo()">Modificar</button>
-    <button onclick="cerrarModalArticulo()">Cancelar</button>
-  </div>
-</div>
+<button class="boton" onclick="redirigir('capturar.html')">Capturar Inventario</button>
+<button class="boton" onclick="redirigir('ver-nombres.html')">Ver Inventarios</button>
+<button class="boton" onclick="redirigir('compras.html')">Compras</button>
+<button class="boton" onclick="redirigir('nomina.html')">Nómina</button>
+<button class="boton" onclick="redirigir('prestamos.html')">Préstamos</button>
+<button class="boton" onclick="redirigir('horarios.html')">Horarios</button>
+<button class="boton" onclick="redirigir('ahorro.html')">Ahorro</button>
+<button class="boton" onclick="redirigir('configuracion.html')">Configuración ⚙️</button>
 
 <footer>
   Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
 </footer>
 
 <script>
-const SERVER = "https://inventario-horom-production.up.railway.app";
-let inventarios = [];
-let datosPendientes = {};
-let superContraseña = "Pelon93.";
+const server = "https://inventario-horom-production.up.railway.app";
 
-async function cargarUsuarios() {
-  const loader = document.getElementById("loader");
-  loader.style.display = "block";
-  try {
-    const res = await fetch(`${SERVER}/usuarios-registrados`);
-    const usuarios = await res.json();
-    const select = document.getElementById("usuario");
-    select.innerHTML = '<option disabled selected>Selecciona Usuario</option>';
-    usuarios.forEach(u => {
-      select.innerHTML += `<option value="${u.usuario}">${u.usuario}</option>`;
-    });
-  } catch (error) {
-    console.error(error);
-    alert("❌ Error de conexión al servidor");
-  }
-  loader.style.display = "none";
+// Mostrar fecha y hora actual
+function mostrarFechaHora() {
+  const now = new Date();
+  const opciones = {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
+  document.getElementById('fecha-hora').textContent = now.toLocaleDateString('es-MX', opciones);
 }
+mostrarFechaHora();
 
-async function cargarInventarios() {
-  try {
-    const res = await fetch(`${SERVER}/nombres`);
-    inventarios = await res.json();
-  } catch (error) {
-    console.error("Error al cargar inventarios:", error);
+// Validar sesión
+function validarSesion() {
+  const usuario = localStorage.getItem("usuarioActivo");
+  if (!usuario) {
+    window.location.href = "login.html";
   }
 }
 
-cargarUsuarios();
-cargarInventarios();
+validarSesion();
 
-document.getElementById("formulario").addEventListener("submit", async function(e) {
-  e.preventDefault();
-  const usuario = document.getElementById("usuario").value;
-  const contraseña = document.getElementById("usuario-pass").value;
-  const ubicacion = document.getElementById("ubicacion").value;
-  const area = document.getElementById("area").value;
-  const mensaje = document.getElementById("mensaje");
-
-  if (!usuario || !contraseña || !ubicacion || !area) {
-    mensaje.style.color = "red";
-    mensaje.textContent = "❌ Todos los campos son obligatorios.";
-    return;
-  }
-
-  try {
-    const res = await fetch(`${SERVER}/validar-usuario`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({usuario, contraseña})
-    });
-    const data = await res.json();
-    if (!data.valido) {
-      mensaje.style.color = "red";
-      mensaje.textContent = "❌ Usuario o contraseña incorrectos.";
-      return;
-    }
-
-    const hoy = new Date().toISOString().split('T')[0];
-    const existe = inventarios.find(inv => {
-      const fecha = new Date(inv.creadoEn).toISOString().split('T')[0];
-      return fecha === hoy && inv.ubicacion === ubicacion && inv.area === area;
-    });
-
-    datosPendientes = { nombre: usuario, ubicacion, area, usuario };
-
-    if (existe) {
-      const nuevaClave = prompt("⚠️ Ya existe inventario. Reconfirma tu contraseña:");
-      if (nuevaClave !== contraseña) {
-        alert("❌ Contraseña incorrecta.");
-        return;
-      }
-      datosPendientes.id = existe._id;
-      datosPendientes.modoEdicion = true;
-      cargarArticulos(area);
-      document.getElementById("modal-articulo").style.display = "block";
-    } else {
-      datosPendientes.modoEdicion = false;
-      localStorage.setItem("tempDatos", JSON.stringify(datosPendientes));
-      mensaje.style.color = "green";
-      mensaje.textContent = "✅ Redirigiendo...";
-      setTimeout(() => {
-        window.location.href = `${area.toLowerCase()}.html`;
-      }, 500);
-    }
-  } catch (error) {
-    console.error("Error al validar usuario:", error);
-  }
-});
-
-function cargarArticulos(area) { /* mismo contenido de articulos */ }
-
-function abrirEdicionArticulo() { /* mismo contenido */ }
-function cerrarModalArticulo() { /* mismo contenido */ }
-function mostrarModalGestion() { document.getElementById("modal-gestion").style.display = "block"; }
-function cerrarModalGestion() { document.getElementById("modal-gestion").style.display = "none"; }
-function validarGestion() { const clave = document.getElementById("pass-gestion").value; if (clave === superContraseña) { window.location.href = "usuarios.html"; cerrarModalGestion(); } else { alert("❌ Contraseña incorrecta."); } }
-function mostrarModalCambio() { document.getElementById("modal-cambio").style.display = "block"; }
-function cerrarModalCambio() { document.getElementById("modal-cambio").style.display = "none"; }
-function cambiarSuper() { /* mismo contenido */ }
-function verInventarios() { window.location.href = "ver-nombres.html"; }
-function verCompras() { window.location.href = "compras.html"; }
+// Redirigir
+function redirigir(pagina) {
+  document.getElementById("loader").style.display = "block";
+  setTimeout(() => {
+    window.location.href = pagina;
+  }, 300);
+}
 </script>
 
 </body>
