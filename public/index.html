@@ -3,59 +3,87 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inventario Horom - Inicio</title>
+  <title>Inicio - Inventario</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
-    button { padding: 10px 20px; margin: 10px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
-    .boton { background-color: #e74c3c; color: white; }
-    #info-usuario { position: fixed; top: 10px; right: 10px; font-size: 14px; color: gray; }
-    footer { margin-top: 50px; font-size: 12px; color: gray; }
-    #loader { display: none; font-size: 14px; color: #555; }
+    body {font-family: Arial, sans-serif; margin: 0; padding: 20px; text-align: center; background: #f9f9f9;}
+    h2 {font-size: 6vw; margin-bottom: 20px;}
+    .info-usuario {margin-bottom: 20px; font-size: 4vw; color: #333;}
+    button {width: 90%; max-width: 300px; padding: 15px; margin: 10px auto; font-size: 4.5vw; border: none; border-radius: 8px; background: #d32f2f; color: white; display: block;}
+    button:hover {background: #b71c1c;}
+    footer {margin-top: 30px; font-size: 3vw; color: gray;}
+    #loader {display: none; margin-top: 10px; font-size: 3vw; color: #555;}
+    @media(min-width: 600px) {
+      h2 {font-size: 2.5rem;}
+      .info-usuario {font-size: 1.5rem;}
+      button {font-size: 1.2rem;}
+      footer {font-size: 1rem;}
+    }
   </style>
 </head>
 <body>
 
-<div id="info-usuario">Usuario: Cargando...</div>
-<button onclick="cerrarSesion()" style="position: fixed; top: 10px; left: 10px; background:red; color:white;">Cerrar Sesión</button>
+<h2>Inventario Orom</h2>
+<div class="info-usuario" id="usuario-info">Cargando usuario...</div>
 
-<h1>Menú Principal</h1>
+<button onclick="irACapturar()">Capturar Inventario</button>
+<button onclick="irAVerInventarios()">Ver Inventarios</button>
+<button onclick="irACompras()">Compras</button>
+<button onclick="irANomina()">Nómina</button>
+<button onclick="irAPrestamos()">Préstamos</button>
+<button onclick="irAHorarios()">Horario</button>
+<button onclick="irAAhorros()">Ahorros</button>
+<button onclick="irAConfiguracion()">Configuración</button>
+<button onclick="cerrarSesion()">Cerrar Sesión</button>
 
 <div id="loader">Cargando...</div>
 
-<button class="boton" onclick="redirigir('capturar.html')">Capturar Inventario</button><br>
-<button class="boton" onclick="redirigir('nomina.html')">Nómina</button><br>
-<button class="boton" onclick="redirigir('prestamos.html')">Préstamos</button><br>
-<button class="boton" onclick="redirigir('horario.html')">Horario</button><br>
-<button class="boton" onclick="redirigir('ahorro.html')">Ahorro</button><br>
-<button class="boton" onclick="redirigir('ver-nombres.html')">Ver Inventarios</button><br>
-<button class="boton" onclick="redirigir('compras.html')">Compras</button><br>
-<button class="boton" onclick="redirigir('configuracion.html')">Configuración</button><br>
-
 <footer>
-  Aplicación para administración de inventarios para PYMES &mdash; Alejandro Ornelas &mdash; Orom Soluciones
+  Aplicación para administración de inventarios para PYMES - Alejandro Ornelas - Orom Soluciones
 </footer>
 
 <script>
-// Validar sesión
-if (!localStorage.getItem("usuarioActivo")) {
-  window.location.href = "login.html";
+const server = "https://inventario-horom-production.up.railway.app";
+
+function validarSesion() {
+  const usuario = localStorage.getItem("usuarioActivo");
+  if (!usuario) {
+    window.location.href = "login.html";
+  } else {
+    document.getElementById("usuario-info").textContent = `Usuario: ${usuario}`;
+  }
 }
 
-// Mostrar usuario
-const usuarioActivo = localStorage.getItem("usuarioActivo");
-if (usuarioActivo) {
-  document.getElementById("info-usuario").textContent = `Usuario: ${usuarioActivo}`;
+function irACapturar() {
+  window.location.href = "capturar.html";
+}
+function irAVerInventarios() {
+  window.location.href = "ver-nombres.html";
+}
+function irACompras() {
+  window.location.href = "compras.html";
+}
+function irANomina() {
+  alert("Módulo de nómina próximamente");
+}
+function irAPrestamos() {
+  alert("Módulo de préstamos próximamente");
+}
+function irAHorarios() {
+  alert("Módulo de horarios próximamente");
+}
+function irAAhorros() {
+  alert("Módulo de ahorros próximamente");
+}
+function irAConfiguracion() {
+  window.location.href = "configuracion.html";
 }
 
 function cerrarSesion() {
   localStorage.removeItem("usuarioActivo");
-  localStorage.removeItem("idUsuarioActivo");
   window.location.href = "login.html";
 }
 
-function redirigir(pagina) {
-  window.location.href = pagina;
-}
+validarSesion();
 </script>
 
 </body>
