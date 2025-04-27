@@ -1,21 +1,107 @@
 <!DOCTYPE html>
 <html lang="es">
-<head><meta charset="UTF-8"><title>Editar Artículo</title>
-<style>body{font-family:Arial;text-align:center;padding:20px;}input,button{padding:10px;margin:5px;}</style>
+<head>
+  <meta charset="UTF-8">
+  <title>Editar Artículo</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 40px; }
+    form { display: inline-block; background: #f9f9f9; padding: 20px; border-radius: 10px; border: 1px solid #ccc; }
+    input, label, button { width: 100%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #3498db; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #2980b9; }
+    .footer { margin-top: 30px; font-size: 12px; color: gray; }
+  </style>
 </head>
 <body>
-<h2 id="nombre"></h2>
-<input id="cantidad" type="number" placeholder="Cantidad">
-<button onclick="guardar()">Guardar</button><div id="msg"></div>
+
+<h2>✏️ Editar Artículo</h2>
+
+<form id="formulario-editar">
+  <label for="cantidad">Cantidad Nueva:</label>
+  <input type="number" id="cantidad" min="0" required placeholder="Ingresa nueva cantidad">
+
+  <label for="solicito">¿Solicitó?</label>
+  <select id="solicito" required>
+    <option value="No">No</option>
+    <option value="Si">Sí</option>
+  </select>
+
+  <label for="usuario-pass">Confirma tu Contraseña:</label>
+  <input type="password" id="usuario-pass" required placeholder="Tu contraseña">
+
+  <button type="submit">Guardar Cambios</button>
+</form>
+
+<div id="mensaje" style="margin-top:20px;font-size:16px;"></div>
+
+<div class="footer">
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</div>
 
 <script>
-const datos=JSON.parse(localStorage.getItem("tempDatos"));
-nombre.textContent=datos.articulo;
+const server = "https://inventario-horom-production.up.railway.app";
+let datos = JSON.parse(localStorage.getItem("tempDatos")) || {};
 
-async function guardar(){
-await fetch(`http://localhost:3000/editar-articulo/${datos.id}`,{method:"PUT",headers:{"Content-Type":"application/json"},
-body:JSON.stringify({articulo:datos.articulo,cantidad:cantidad.value,usuario:datos.usuario})});
-msg.textContent="✅ Artículo actualizado.";
-setTimeout(()=>window.close(),1000);
-}
-</script></body></html>
+document.getElementById("formulario-editar").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  
+  const cantidad = parseInt(document.getElementById("cantidad").value.trim()) || 0;
+  const solicito = document.getElementById("solicito").value;
+  const contraseña = document.getElementById("usuario-pass").value.trim();
+  const mensaje = document.getElementById("mensaje");
+
+  if (!cantidad && cantidad !== 0) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ La cantidad no puede estar vacía.";
+    return;
+  }
+
+  if (!contraseña) {
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Debes ingresar tu contraseña.";
+    return;
+  }
+
+  try {
+    // Validar usuario nuevamente
+    const res = await fetch(`${server}/validar-usuario`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({ usuario: datos.usuario, contraseña })
+    });
+    const data = await res.json();
+    if (!data.valido) {
+      mensaje.style.color = "red";
+      mensaje.textContent = "❌ Contraseña incorrecta.";
+      return;
+    }
+
+    // Actualizar cantidad y solicitud
+    await fetch(`${server}/editar-articulo/${datos.id}`, {
+      method: "PUT",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({
+        articulo: datos.articulo,
+        cantidad: `${cantidad} | Solicito: ${solicito}`,
+        usuario: datos.usuario
+      })
+    });
+
+    mensaje.style.color = "green";
+    mensaje.textContent = "✅ Artículo actualizado correctamente.";
+    localStorage.removeItem("tempDatos");
+
+    setTimeout(() => {
+      window.close();
+    }, 1200);
+
+  } catch (error) {
+    console.error("❌ Error:", error);
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Error al actualizar artículo.";
+  }
+});
+</script>
+
+</body>
+</html>
