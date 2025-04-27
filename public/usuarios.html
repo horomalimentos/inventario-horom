@@ -2,101 +2,128 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Gestión Usuarios</title>
+  <title>Gestión de Usuarios</title>
   <style>
-    body {font-family: Arial; text-align: center; padding: 20px;}
-    table {margin: auto; width: 70%; border-collapse: collapse;}
-    th, td {border: 1px solid #ccc; padding: 8px;}
-    input, button {padding: 6px; border-radius: 5px; border: 1px solid #ccc;}
-    button {background-color: #3498db; color: white; cursor: pointer; border: none;}
-    button:hover {background-color: #2980b9;}
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    h2 { margin-bottom: 20px; }
+    input, button { width: 80%; max-width: 300px; padding: 10px; margin: 5px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+    table { margin: auto; width: 90%; border-collapse: collapse; font-size: 15px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    button { background-color: #3498db; color: white; cursor: pointer; border: none; }
+    button:hover { background-color: #2980b9; }
+    .btn-danger { background-color: #e74c3c; }
+    .btn-danger:hover { background-color: #c0392b; }
+    .footer { margin-top: 30px; font-size: 12px; color: gray; }
   </style>
 </head>
 <body>
-  <h2>Gestión de Usuarios</h2>
 
-  <input id="nuevoUsuario" placeholder="Usuario">
-  <input id="nuevaPass" placeholder="Contraseña" type="password">
-  <button onclick="agregar()">Agregar Usuario</button><br><br>
+<h2>Gestión de Usuarios 👥</h2>
 
-  <table>
-    <thead>
+<input id="nuevoUsuario" placeholder="Nuevo Usuario" autocomplete="off">
+<input id="nuevaPass" type="password" placeholder="Nueva Contraseña" autocomplete="off">
+<br>
+<button onclick="agregarUsuario()">➕ Agregar Usuario</button>
+
+<br><br>
+
+<table>
+  <thead>
+    <tr>
+      <th>Usuario</th>
+      <th>Nueva Contraseña</th>
+      <th>Modificar</th>
+      <th>Eliminar</th>
+    </tr>
+  </thead>
+  <tbody id="tablaUsuarios"></tbody>
+</table>
+
+<div class="footer">
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</div>
+
+<script>
+const server = "https://inventario-horom-production.up.railway.app";
+
+async function cargarUsuarios() {
+  try {
+    const res = await fetch(`${server}/usuarios-registrados`);
+    const usuarios = await res.json();
+    const tabla = document.getElementById("tablaUsuarios");
+    tabla.innerHTML = usuarios.map(u => `
       <tr>
-        <th>Usuario</th>
-        <th>Nueva Contraseña</th>
-        <th>Modificar</th>
-        <th>Eliminar</th>
+        <td>${u.usuario}</td>
+        <td><input type="password" id="pass-${u._id}" placeholder="Nueva Contraseña"></td>
+        <td><button onclick="modificarUsuario('${u._id}')">✏️ Modificar</button></td>
+        <td><button class="btn-danger" onclick="eliminarUsuario('${u._id}')">🗑️ Eliminar</button></td>
       </tr>
-    </thead>
-    <tbody id="tabla"></tbody>
-  </table>
+    `).join("");
+  } catch (error) {
+    console.error("❌ Error al cargar usuarios:", error);
+    alert("❌ Error al conectar con el servidor");
+  }
+}
 
-  <script>
-    const BASE_URL = "https://inventario-horom-production.up.railway.app";
+async function agregarUsuario() {
+  const usuario = document.getElementById("nuevoUsuario").value.trim();
+  const contraseña = document.getElementById("nuevaPass").value.trim();
+  if (!usuario || !contraseña) {
+    alert("❌ Ambos campos son obligatorios");
+    return;
+  }
+  try {
+    await fetch(`${server}/nuevo-usuario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contraseña })
+    });
+    alert("✅ Usuario agregado exitosamente");
+    document.getElementById("nuevoUsuario").value = "";
+    document.getElementById("nuevaPass").value = "";
+    cargarUsuarios();
+  } catch (error) {
+    console.error("❌ Error al agregar usuario:", error);
+    alert("❌ Error al agregar usuario");
+  }
+}
 
-    async function cargar() {
-      try {
-        const res = await fetch(`${BASE_URL}/usuarios-registrados`);
-        const users = await res.json();
-        const tabla = document.getElementById("tabla");
-        tabla.innerHTML = users.map(u => `
-          <tr>
-            <td>${u.usuario}</td>
-            <td><input type="password" id="p${u._id}" placeholder="Nueva Contraseña"></td>
-            <td><button onclick="modificar('${u._id}')">Modificar</button></td>
-            <td><button onclick="eliminar('${u._id}')">Eliminar</button></td>
-          </tr>`).join("");
-      } catch (error) {
-        console.error("Error al cargar usuarios:", error);
-      }
-    }
+async function modificarUsuario(id) {
+  const nuevaPass = document.getElementById(`pass-${id}`).value.trim();
+  if (!nuevaPass) {
+    alert("❌ Ingresa una nueva contraseña");
+    return;
+  }
+  try {
+    await fetch(`${server}/modificar-usuario/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contraseña: nuevaPass })
+    });
+    alert("✅ Contraseña modificada exitosamente");
+    cargarUsuarios();
+  } catch (error) {
+    console.error("❌ Error al modificar usuario:", error);
+    alert("❌ Error al modificar usuario");
+  }
+}
 
-    async function agregar() {
-      try {
-        await fetch(`${BASE_URL}/nuevo-usuario`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            usuario: document.getElementById("nuevoUsuario").value,
-            contraseña: document.getElementById("nuevaPass").value
-          })
-        });
-        cargar();
-      } catch (error) {
-        console.error("Error al agregar usuario:", error);
-      }
-    }
+async function eliminarUsuario(id) {
+  if (!confirm("⚠️ ¿Estás seguro de eliminar este usuario?")) return;
+  try {
+    await fetch(`${server}/eliminar-usuario/${id}`, { method: "DELETE" });
+    alert("✅ Usuario eliminado exitosamente");
+    cargarUsuarios();
+  } catch (error) {
+    console.error("❌ Error al eliminar usuario:", error);
+    alert("❌ Error al eliminar usuario");
+  }
+}
 
-    async function modificar(id) {
-      try {
-        await fetch(`${BASE_URL}/modificar-usuario/${id}`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contraseña: document.getElementById(`p${id}`).value
-          })
-        });
-        cargar();
-      } catch (error) {
-        console.error("Error al modificar usuario:", error);
-      }
-    }
-
-    async function eliminar(id) {
-      if (confirm("¿Seguro que quieres eliminar este usuario?")) {
-        try {
-          await fetch(`${BASE_URL}/eliminar-usuario/${id}`, {
-            method: "DELETE"
-          });
-          cargar();
-        } catch (error) {
-          console.error("Error al eliminar usuario:", error);
-        }
-      }
-    }
-
-    cargar();
-  </script>
+// Cargar usuarios al iniciar
+cargarUsuarios();
+</script>
 
 </body>
 </html>
