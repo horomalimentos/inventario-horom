@@ -3,175 +3,167 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Administrador de Artículos</title>
+  <title>Gestión de Artículos</title>
   <style>
-    body {font-family: Arial, sans-serif; margin: 20px; text-align: center;}
-    h2 {margin-bottom: 20px;}
-    table {width: 100%; margin: auto; border-collapse: collapse; font-size: 14px;}
-    th, td {border: 1px solid #ccc; padding: 8px; text-align: center;}
-    th {background-color: #f2f2f2; cursor: pointer;}
-    input, select, button {padding: 8px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px;}
-    button {background-color: #e74c3c; color: white; cursor: pointer;}
-    button:hover {background-color: #c0392b;}
-    .loader {display: none; margin: 20px; font-size: 16px; color: #555;}
-    footer {margin-top: 20px; font-size: 12px; color: gray;}
+    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+    table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px; }
+    th { background-color: #f2f2f2; }
+    button { margin: 5px; padding: 8px 12px; font-size: 14px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; cursor: pointer; }
+    button:hover { background-color: #c0392b; }
+    .formulario { margin-top: 20px; }
+    input, select { padding: 8px; margin: 5px; width: 200px; font-size: 14px; border: 1px solid #ccc; border-radius: 5px; }
+    .footer { margin-top: 30px; font-size: 12px; color: gray; }
+    @media (max-width: 600px) {
+      table { font-size: 12px; }
+      input, select { width: 90%; }
+    }
   </style>
 </head>
 <body>
 
-<h2>Administrador de Artículos 📦</h2>
+<h2>Gestión de Artículos 📦</h2>
 
-<div id="loader" class="loader">Cargando datos, por favor espera...</div>
-
-<!-- Formulario de Nuevo Artículo -->
-<form id="form-nuevo-articulo">
-  <input id="nombreArticulo" placeholder="Nombre del Artículo" required><br>
-  <select id="proveedorArticulo" required></select>
-  <button type="button" onclick="nuevoProveedor()">+ Proveedor</button><br>
-  <select id="areaArticulo" required>
+<div class="formulario">
+  <input type="text" id="nombre" placeholder="Nombre del artículo" required>
+  <input type="text" id="proveedor" placeholder="Proveedor" required>
+  <input type="text" id="unidad" placeholder="Unidad de medida" required>
+  <input type="number" id="costo" placeholder="Costo inicial" required>
+  <select id="area" required>
     <option disabled selected>Selecciona Área</option>
     <option value="Caja">Caja</option>
-    <option value="Sushi">Sushi</option>
     <option value="Cocina">Cocina</option>
-  </select><br>
-  <select id="tipoMedicion" required>
-    <option disabled selected>Tipo de Medición</option>
-    <option>pieza</option>
-    <option>kilo</option>
-    <option>litro</option>
-    <option>costal</option>
-    <option>paquete</option>
-    <option>cubeta</option>
-    <option>galon</option>
-  </select><br>
-  <input type="number" id="costoArticulo" placeholder="Costo inicial" step="0.01" required><br>
-  <button type="submit">Agregar Artículo</button>
-</form>
+    <option value="Sushi">Sushi</option>
+  </select>
+  <br>
+  <button onclick="agregarArticulo()">Agregar Artículo</button>
+  <button onclick="regresar()">Regresar</button>
+</div>
 
-<br><button onclick="regresarInicio()">Regresar a Inicio</button>
-
-<table id="tabla-articulos">
+<table>
   <thead>
     <tr>
-      <th>Nombre</th>
+      <th>Artículo</th>
       <th>Proveedor</th>
-      <th>Área</th>
-      <th>Medición</th>
+      <th>Unidad</th>
       <th>Costo Actual</th>
-      <th>Historial</th>
-      <th>Editar</th>
-      <th>Eliminar</th>
+      <th>Área</th>
+      <th>Acciones</th>
     </tr>
   </thead>
-  <tbody></tbody>
+  <tbody id="tabla-articulos"></tbody>
 </table>
 
-<footer>
-  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
-</footer>
+<div class="footer">
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
+</div>
 
 <script>
 const SERVER = "https://inventario-horom-production.up.railway.app";
 
-async function validarSuper(){
-  const clave = prompt("Introduce supercontraseña:");
-  if (clave !== "Pelon93."){
-    alert("❌ Acceso denegado");
-    location.href = "index.html";
+async function verificarAcceso() {
+  const clave = prompt("Introduce la supercontraseña:");
+  if (clave !== "Pelon93.") {
+    alert("❌ Acceso denegado.");
+    window.location.href = "index.html";
   }
 }
 
-function regresarInicio(){
-  location.href = "index.html";
-}
-
-async function cargarProveedores(){
-  const res = await fetch(`${SERVER}/proveedores`);
-  const datos = await res.json();
-  const proveedorSelect = document.getElementById("proveedorArticulo");
-  proveedorSelect.innerHTML = '<option disabled selected>Selecciona Proveedor</option>';
-  datos.forEach(p => {
-    proveedorSelect.innerHTML += `<option value="${p.nombreProveedor}">${p.nombreProveedor}</option>`;
-  });
-}
-
-async function nuevoProveedor(){
-  const nuevo = prompt("Nombre del nuevo proveedor:");
-  if(nuevo){
-    await fetch(`${SERVER}/proveedores`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({nombreProveedor: nuevo})
+async function cargarArticulos() {
+  try {
+    const res = await fetch(`${SERVER}/articulos`);
+    const articulos = await res.json();
+    const tabla = document.getElementById("tabla-articulos");
+    tabla.innerHTML = "";
+    articulos.forEach(a => {
+      tabla.innerHTML += `
+        <tr>
+          <td>${a.nombre}</td>
+          <td>${a.proveedor}</td>
+          <td>${a.unidad}</td>
+          <td>$${a.costo}</td>
+          <td>${a.area}</td>
+          <td>
+            <button onclick="editarArticulo('${a._id}')">Editar</button>
+            <button onclick="eliminarArticulo('${a._id}')">Eliminar</button>
+          </td>
+        </tr>
+      `;
     });
-    cargarProveedores();
+  } catch (error) {
+    console.error(error);
+    alert("Error cargando artículos.");
   }
 }
 
-async function agregarArticulo(e){
-  e.preventDefault();
-  const articulo = {
-    nombre: document.getElementById("nombreArticulo").value.trim(),
-    proveedor: document.getElementById("proveedorArticulo").value,
-    area: document.getElementById("areaArticulo").value,
-    tipoMedicion: document.getElementById("tipoMedicion").value,
-    costoActual: parseFloat(document.getElementById("costoArticulo").value),
-    historialCostos: []
-  };
-  await fetch(`${SERVER}/articulos`, {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify(articulo)
-  });
-  cargarArticulos();
-  document.getElementById("form-nuevo-articulo").reset();
-}
+async function agregarArticulo() {
+  const nombre = document.getElementById("nombre").value.trim();
+  const proveedor = document.getElementById("proveedor").value.trim();
+  const unidad = document.getElementById("unidad").value.trim();
+  const costo = parseFloat(document.getElementById("costo").value);
+  const area = document.getElementById("area").value;
 
-async function cargarArticulos(){
-  const loader = document.getElementById("loader");
-  loader.style.display = "block";
-  const res = await fetch(`${SERVER}/articulos`);
-  const datos = await res.json();
-  const tbody = document.querySelector("#tabla-articulos tbody");
-  tbody.innerHTML = "";
+  if (!nombre || !proveedor || !unidad || isNaN(costo) || !area) {
+    alert("Todos los campos son obligatorios.");
+    return;
+  }
 
-  datos.forEach(a => {
-    const fila = document.createElement("tr");
-    fila.innerHTML = `
-      <td>${a.nombre}</td>
-      <td>${a.proveedor}</td>
-      <td>${a.area}</td>
-      <td>${a.tipoMedicion}</td>
-      <td>$${a.costoActual.toFixed(2)}</td>
-      <td><button onclick="verHistorial('${a._id}')">Ver</button></td>
-      <td><button onclick="editarArticulo('${a._id}')">Editar</button></td>
-      <td><button onclick="eliminarArticulo('${a._id}')">Eliminar</button></td>
-    `;
-    tbody.appendChild(fila);
-  });
-
-  loader.style.display = "none";
-}
-
-async function eliminarArticulo(id){
-  if(confirm("¿Seguro de eliminar el artículo?")){
-    await fetch(`${SERVER}/articulos/${id}`, {method: "DELETE"});
+  try {
+    await fetch(`${SERVER}/nuevo-articulo`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ nombre, proveedor, unidad, costo, area })
+    });
+    alert("✅ Artículo agregado correctamente.");
     cargarArticulos();
+    document.getElementById("nombre").value = "";
+    document.getElementById("proveedor").value = "";
+    document.getElementById("unidad").value = "";
+    document.getElementById("costo").value = "";
+    document.getElementById("area").selectedIndex = 0;
+  } catch (error) {
+    console.error(error);
+    alert("Error agregando artículo.");
   }
 }
 
-async function verHistorial(id){
-  // Aquí podríamos abrir un modal mostrando historial (lo puedo agregar si quieres después)
-  alert("🔎 Función de historial próximamente en modal detallado.");
+async function eliminarArticulo(id) {
+  if (!confirm("¿Seguro que deseas eliminar este artículo?")) return;
+  try {
+    await fetch(`${SERVER}/eliminar-articulo/${id}`, { method: "DELETE" });
+    alert("✅ Artículo eliminado.");
+    cargarArticulos();
+  } catch (error) {
+    console.error(error);
+    alert("Error eliminando artículo.");
+  }
 }
 
-async function editarArticulo(id){
-  alert("🔧 Función de editar en desarrollo (siguiente paso)");
+async function editarArticulo(id) {
+  const nuevoCosto = prompt("Nuevo costo para el artículo:");
+  if (!nuevoCosto || isNaN(nuevoCosto)) {
+    alert("❌ Costo inválido.");
+    return;
+  }
+  try {
+    await fetch(`${SERVER}/editar-articulo/${id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ costo: parseFloat(nuevoCosto) })
+    });
+    alert("✅ Artículo actualizado.");
+    cargarArticulos();
+  } catch (error) {
+    console.error(error);
+    alert("Error actualizando artículo.");
+  }
 }
 
-document.getElementById("form-nuevo-articulo").addEventListener("submit", agregarArticulo);
+function regresar() {
+  window.location.href = "index.html";
+}
 
-validarSuper();
-cargarProveedores();
+verificarAcceso();
 cargarArticulos();
 </script>
 
