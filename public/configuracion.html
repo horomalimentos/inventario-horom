@@ -1,1 +1,68 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Configuración - Inventario</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+    h2 { margin-bottom: 20px; }
+    .config-box { display: inline-block; padding: 20px; border: 1px solid #ccc; border-radius: 10px; background: #f9f9f9; width: 90%; max-width: 400px; }
+    button { margin: 10px; padding: 10px 20px; font-size: 16px; border: none; border-radius: 5px; background-color: #e74c3c; color: white; cursor: pointer; }
+    button:hover { background-color: #c0392b; }
+    #diferencia-horas { margin-top: 15px; font-size: 18px; }
+    footer { margin-top: 40px; font-size: 12px; color: gray; }
+    @media (max-width: 600px) {
+      .config-box { width: 95%; }
+      button { width: 80%; }
+    }
+  </style>
+</head>
+<body>
+
+<h2>Configuración General ⚙️</h2>
+
+<div class="config-box">
+  <h3>Ajustar Horario</h3>
+  <div id="diferencia-horas">Cargando...</div>
+  <button onclick="ajustarHora(1)">➕ Aumentar 1 hora</button>
+  <button onclick="ajustarHora(-1)">➖ Disminuir 1 hora</button>
+  <br>
+  <button onclick="guardarConfiguracion()">Guardar Configuración</button>
+  <br><br>
+  <button onclick="regresarInicio()" style="background-color: gray;">Regresar</button>
+</div>
+
+<footer>
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</footer>
+
+<script>
+let diferenciaHoras = parseInt(localStorage.getItem('diferenciaHoras')) || 0;
+
+function mostrarDiferencia() {
+  const texto = diferenciaHoras >= 0 ? `+${diferenciaHoras} horas` : `${diferenciaHoras} horas`;
+  document.getElementById("diferencia-horas").textContent = `Diferencia actual: ${texto}`;
+}
+
+function ajustarHora(valor) {
+  diferenciaHoras += valor;
+  mostrarDiferencia();
+}
+
+function guardarConfiguracion() {
+  localStorage.setItem('diferenciaHoras', diferenciaHoras);
+  alert("✅ Configuración guardada correctamente.");
+}
+
+function regresarInicio() {
+  window.location.href = "index.html";
+}
+
+// Mostrar al cargar
+mostrarDiferencia();
+</script>
+
+</body>
+</html>
 
