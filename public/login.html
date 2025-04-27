@@ -1,1 +1,109 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Iniciar Sesión</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      padding: 30px;
+      background: #f7f7f7;
+    }
+    form {
+      background: white;
+      padding: 25px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+      display: inline-block;
+      width: 100%;
+      max-width: 400px;
+    }
+    input, button {
+      width: 90%;
+      padding: 12px;
+      margin: 10px 0;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      font-size: 16px;
+    }
+    button {
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #c0392b;
+    }
+    .mensaje {
+      margin-top: 20px;
+      font-size: 14px;
+      color: red;
+    }
+    footer {
+      margin-top: 40px;
+      font-size: 12px;
+      color: gray;
+    }
+  </style>
+</head>
+<body>
+
+<h2>Bienvenido</h2>
+
+<form id="form-login">
+  <input type="text" id="usuario" placeholder="Usuario" required>
+  <input type="password" id="password" placeholder="Contraseña" required>
+  <button type="submit">Ingresar</button>
+</form>
+
+<div class="mensaje" id="mensaje"></div>
+
+<footer>
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
+</footer>
+
+<script>
+const SERVER = "https://inventario-horom-production.up.railway.app";
+
+document.getElementById("form-login").addEventListener("submit", async function(e) {
+  e.preventDefault();
+  
+  const usuario = document.getElementById("usuario").value.trim();
+  const contraseña = document.getElementById("password").value.trim();
+  const mensaje = document.getElementById("mensaje");
+
+  if (!usuario || !contraseña) {
+    mensaje.textContent = "❌ Ingresa tu usuario y contraseña.";
+    return;
+  }
+
+  try {
+    const res = await fetch(`${SERVER}/validar-usuario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contraseña })
+    });
+
+    const data = await res.json();
+    
+    if (data.valido) {
+      localStorage.setItem("usuarioActivo", usuario);
+      localStorage.setItem("horaLogin", new Date().toISOString());
+      window.location.href = "index.html";
+    } else {
+      mensaje.textContent = "❌ Usuario o contraseña incorrectos.";
+    }
+
+  } catch (error) {
+    console.error(error);
+    mensaje.textContent = "❌ Error de conexión con el servidor.";
+  }
+});
+</script>
+
+</body>
+</html>
 
