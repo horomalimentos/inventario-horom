@@ -2,102 +2,92 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <title>Panel Principal - Inventario Horom</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Menú Principal</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
-    h2 { margin-bottom: 20px; }
-    button { width: 90%; max-width: 300px; padding: 12px; margin: 10px 0; font-size: 16px; border: none; border-radius: 5px; background-color: #d9534f; color: white; cursor: pointer; }
-    button:hover { background-color: #c9302c; }
-    footer { margin-top: 40px; font-size: 12px; color: gray; }
-    #loader { display: none; margin-top: 20px; font-size: 14px; color: #555; }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    h2 { margin-bottom: 30px; }
+    .botones { display: flex; flex-direction: column; align-items: center; gap: 15px; }
+    button {
+      width: 90%; max-width: 300px;
+      padding: 15px;
+      font-size: 18px;
+      background-color: #e74c3c;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      cursor: pointer;
+    }
+    button:hover { background-color: #c0392b; }
+    .footer { margin-top: 40px; font-size: 12px; color: gray; }
+    #fechaHora { margin: 20px 0; font-size: 14px; color: #555; }
   </style>
 </head>
 <body>
 
-<h2>Menú Principal</h2>
+<script>
+// PROTEGER ACCESO
+const usuarioActivo = JSON.parse(localStorage.getItem("usuarioLogueado"));
+if (!usuarioActivo) {
+  window.location.href = "login.html";
+}
+</script>
 
-<div id="loader">Cargando...</div>
+<h2>Bienvenido, <span id="nombreUsuario"></span>!</h2>
 
-<button onclick="irACapturar()">Capturar Inventario</button>
-<button onclick="irAVerInventarios()">Ver Inventarios</button>
-<button onclick="irACompras()">Compras</button>
-<button onclick="cambiarMiContraseña()">Cambiar Mi Contraseña</button>
-<button onclick="accederConfiguracion()">Configuración (Protegida)</button>
+<div id="fechaHora"></div>
 
-<footer>
+<div class="botones">
+  <button onclick="irACapturar()">Capturar Inventario</button>
+  <button onclick="irACompras()">Compras</button>
+  <button onclick="irAVerInventarios()">Ver Inventarios</button>
+  <button onclick="irANomina()">Nómina</button>
+  <button onclick="irAPrestamos()">Préstamos</button>
+  <button onclick="irAHorario()">Horario</button>
+  <button onclick="irAAhorro()">Ahorro</button>
+  <button onclick="protegerConfiguracion()">Configuración</button>
+  <button onclick="cerrarSesion()">Cerrar Sesión</button>
+</div>
+
+<div class="footer">
   Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
-</footer>
+</div>
 
 <script>
-const SERVER = "https://inventario-horom-production.up.railway.app";
-const SUPERCONTRASEÑA = "Pelon93."; // Puedes cambiarla luego desde config
+const superContraseña = "Pelon93."; // Esta la puedes mover a configuracion después
 
-// Validar sesión al entrar
-window.onload = function() {
-  const sesion = JSON.parse(localStorage.getItem("sesionUsuario"));
-  if (!sesion || !sesion.usuario) {
-    alert("Debes iniciar sesión.");
-    window.location.href = "login.html";
-  }
-};
+document.getElementById("nombreUsuario").textContent = usuarioActivo.usuario;
 
-function irACapturar() {
-  window.location.href = "capturar.html";
+function actualizarFechaHora() {
+  const ahora = new Date();
+  const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute:'2-digit' };
+  document.getElementById("fechaHora").textContent = ahora.toLocaleString("es-MX", opciones);
 }
 
-function irAVerInventarios() {
-  window.location.href = "ver-nombres.html";
-}
+setInterval(actualizarFechaHora, 1000);
+actualizarFechaHora();
 
-function irACompras() {
-  window.location.href = "compras.html";
-}
+function irACapturar() { window.location.href = "capturar.html"; }
+function irACompras() { window.location.href = "compras.html"; }
+function irAVerInventarios() { window.location.href = "ver-nombres.html"; }
+function irANomina() { window.location.href = "nomina.html"; }
+function irAPrestamos() { window.location.href = "prestamos.html"; }
+function irAHorario() { window.location.href = "horario.html"; }
+function irAAhorro() { window.location.href = "ahorro.html"; }
 
-async function cambiarMiContraseña() {
-  const actual = prompt("Introduce tu contraseña actual:");
-  const sesion = JSON.parse(localStorage.getItem("sesionUsuario"));
-
-  if (!actual || actual.trim() === "") return;
-
-  try {
-    const validar = await fetch(`${SERVER}/validar-usuario`, {
-      method: "POST",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({usuario: sesion.usuario, contraseña: actual})
-    });
-    const data = await validar.json();
-
-    if (!data.valido) {
-      alert("❌ Contraseña incorrecta.");
-      return;
-    }
-
-    const nueva = prompt("Introduce nueva contraseña (mínimo 4 caracteres):");
-    if (!nueva || nueva.length < 4) {
-      alert("❌ Nueva contraseña no válida.");
-      return;
-    }
-
-    await fetch(`${SERVER}/modificar-usuario/${sesion.id}`, {
-      method: "PUT",
-      headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({contraseña: nueva})
-    });
-
-    alert("✅ Contraseña cambiada correctamente.");
-  } catch (error) {
-    console.error(error);
-    alert("❌ Error al cambiar contraseña.");
-  }
-}
-
-function accederConfiguracion() {
-  const clave = prompt("Introduce la supercontraseña:");
-  if (clave === SUPERCONTRASEÑA) {
+function protegerConfiguracion() {
+  const clave = prompt("Introduce la supercontraseña para acceder a configuración:");
+  if (clave === superContraseña) {
     window.location.href = "configuracion.html";
   } else {
-    alert("❌ Supercontraseña incorrecta.");
+    alert("❌ Contraseña incorrecta.");
+  }
+}
+
+function cerrarSesion() {
+  if (confirm("¿Seguro que quieres cerrar sesión?")) {
+    localStorage.removeItem("usuarioLogueado");
+    window.location.href = "login.html";
   }
 }
 </script>
