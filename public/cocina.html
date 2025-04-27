@@ -2,128 +2,115 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Inventario Área Cocina 👩‍🍳</title>
+  <title>Inventario Área Cocina 👨‍🍳</title>
   <style>
     body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
     h2 { margin-bottom: 20px; }
-    table { width: 95%; margin: auto; border-collapse: collapse; font-size: 14px; margin-top: 20px; }
-    th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
-    th { background-color: #f2f2f2; }
-    input[type="number"] { width: 70px; padding: 5px; font-size: 14px; border-radius: 4px; border: 1px solid #ccc; }
-    button { margin-top: 20px; padding: 10px 20px; font-size: 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
-    button:hover { background-color: #218838; }
-    .mensaje { margin-top: 15px; font-size: 16px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.5); text-align: center; padding-top: 80px; z-index: 1000; }
+    .modal-content { background: white; margin: auto; padding: 20px; border-radius: 10px; width: 350px; }
+    input[type="number"], label { margin: 10px; font-size: 16px; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
+    button.guardar { background-color: #28a745; color: white; }
+    button.guardar:hover { background-color: #218838; }
+    button.capturar { background-color: #3498db; color: white; }
+    button.capturar:hover { background-color: #2980b9; }
+    table { width: 90%; margin: auto; margin-top: 30px; border-collapse: collapse; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background: #f2f2f2; }
     .footer { margin-top: 30px; font-size: 12px; color: gray; }
-    .modal {
-      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0,0,0,0.5); text-align: center; padding-top: 100px; z-index: 1000;
-    }
-    .modal-content {
-      background: white; margin: auto; padding: 20px; border-radius: 10px; width: 300px;
-    }
   </style>
 </head>
 <body>
 
-<h2>Inventario Área Cocina 👩‍🍳</h2>
+<h2>Inventario Área Cocina 👨‍🍳</h2>
+
+<div id="modal" class="modal">
+  <div class="modal-content">
+    <h3 id="nombre-articulo"></h3>
+    <input type="number" id="cantidad" placeholder="Cantidad" min="0" required><br>
+    <label><input type="checkbox" id="solicito"> Solicitó</label><br><br>
+    <button class="capturar" onclick="capturarDato()">Capturar</button>
+  </div>
+</div>
 
 <form id="formulario-cocina" style="display:none;">
   <table>
     <thead>
-      <tr><th>Artículo</th><th>Cantidad</th><th>¿Solicitó?</th></tr>
+      <tr>
+        <th>Artículo</th>
+        <th>Cantidad</th>
+        <th>Solicitó</th>
+      </tr>
     </thead>
     <tbody id="tabla-articulos"></tbody>
   </table>
-  <button type="submit" id="btn-guardar">Guardar Inventario</button>
+  <button type="submit" class="guardar">Guardar Inventario</button>
 </form>
-
-<div class="mensaje" id="mensaje"></div>
 
 <div class="footer">
   Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
 </div>
 
-<!-- Modal para capturar -->
-<div id="modal-captura" class="modal">
-  <div class="modal-content">
-    <h3 id="nombre-articulo"></h3>
-    <input type="number" id="cantidad" placeholder="Cantidad" required><br><br>
-    <label><input type="checkbox" id="solicito"> ¿Solicitó?</label><br><br>
-    <button onclick="guardarItem()">Continuar</button>
-  </div>
-</div>
-
 <script>
 const articulos = [
-  "AROS DE CEBOLLA", "BISTEK PICADO", "DEDOS DE Q", "TOCINO", "SALCHICHA",
-  "ARROZ MEX", "AZUCAR", "HARINA", "HUEVO", "MAIZENA", "PIMIENTA", "SAL",
-  "BBQ", "BUFALO", "KETCHUP STARVALUE", "MANGO HABAN", "MAYONESA STARVALUE",
-  "AJO", "AJO MOLIDO", "ANIS", "CHIL ARBOL", "GENGIBRE", "ALUMINIO GDE",
-  "PAPEL CEBOLLA", "PIEDRA PLANCHA", "PLATO 7", "TAPA 1 LT", "TAPA 2 OZ",
-  "VASO 1 LT", "VASO 2 OZ", "CHIPOTLE LATA GDE", "KETCHUP HUNTS", "BOLSA NEGR",
-  "DESENGRASANTE", "FIBRAS", "PAPEL CANELA", "TRAPEADOR", "CALABAZA", "CEBOLLA",
-  "CEBOLLIN", "HABANERO", "JALAPEÑO", "MORRON AM", "MORRON VE", "PAPA COSTAL",
-  "ZANAHORIA", "CONCENTRADO SAMBAL", "ACEITE", "COLORANTE", "PARMESANO",
-  "PIMI LIMON", "AJINOMOTO", "DASHI", "SOYA KIKOMA", "SOYA LUCKY",
-  "TOGARACHI", "ALITAS", "PAPA BOLSA", "PECHUGA", "PUERCO", "TRAPOS",
-  "ENCENDEDOR", "BROCOLI"
+  "AROS DE CEBOLLA","BISTEK PICADO","DEDOS DE Q","TOCINO","SALCHICHA","ARROZ MEX","AZUCAR","HARINA","HUEVO","MAIZENA",
+  "PIMIENTA","SAL","BBQ","BUFALO","KETCHUP STARVALUE","MANGO HABAN","MAYONESA STARVALUE","AJO","AJO MOLIDO","ANIS",
+  "CHIL ARBOL","GENGIBRE","ALUMINIO GDE","PAPEL CEBOLLA","PIEDRA PLANCHA","PLATO 7","TAPA 1 LT","TAPA 2 OZ","VASO 1 LT",
+  "VASO 2 OZ","CHIPOTLE LATA GDE","KETCHUP HUNTS","BOLSA NEGR","DESENGRASANTE","FIBRAS","PAPEL CANELA","TRAPEADOR",
+  "CALABAZA","CEBOLLA","CEBOLLIN","HABANERO","JALAPEÑO","MORRON AM","MORRON VE","PAPA COSTAL","ZANAHORIA",
+  "CONCENTRADO SAMBAL","ACEITE","COLORANTE","PARMESANO","PIMI LIMON","AJINOMOTO","DASHI","SOYA KIKOMA","SOYA LUCKY",
+  "TOGARACHI","ALITAS","PAPA BOLSA","PECHUGA","PUERCO","TRAPOS","ENCENDEDOR","BROCOLI"
 ];
 
 const server = "https://inventario-horom-production.up.railway.app";
 let datosCapturados = [];
 let indexArticulo = 0;
-
-const modal = document.getElementById("modal-captura");
+const modal = document.getElementById("modal");
 const nombreArticulo = document.getElementById("nombre-articulo");
-const inputCantidad = document.getElementById("cantidad");
-const inputSolicito = document.getElementById("solicito");
-
-function iniciarCaptura() {
-  mostrarModal();
-}
+const cantidadInput = document.getElementById("cantidad");
+const solicitoCheck = document.getElementById("solicito");
+const tabla = document.getElementById("tabla-articulos");
 
 function mostrarModal() {
+  if (indexArticulo >= articulos.length) {
+    modal.style.display = "none";
+    document.getElementById("formulario-cocina").style.display = "block";
+    cargarTabla();
+    return;
+  }
   nombreArticulo.textContent = articulos[indexArticulo];
-  inputCantidad.value = "";
-  inputSolicito.checked = false;
+  cantidadInput.value = "";
+  solicitoCheck.checked = false;
   modal.style.display = "block";
-  inputCantidad.focus();
 }
 
-function guardarItem() {
-  const cantidad = inputCantidad.value.trim();
+function capturarDato() {
+  const cantidad = cantidadInput.value.trim();
   if (cantidad === "") {
-    alert("⚠️ Debes capturar una cantidad.");
+    alert("❌ Debes capturar una cantidad antes de continuar.");
     return;
   }
   datosCapturados.push({
-    nombre: articulos[indexArticulo],
+    articulo: articulos[indexArticulo],
     cantidad: cantidad,
-    solicito: inputSolicito.checked ? "Sí" : "No"
+    solicito: solicitoCheck.checked ? "Sí" : "No"
   });
-
   indexArticulo++;
-  if (indexArticulo < articulos.length) {
-    mostrarModal();
-  } else {
-    modal.style.display = "none";
-    mostrarTabla();
-  }
+  mostrarModal();
 }
 
-function mostrarTabla() {
-  const tabla = document.getElementById("tabla-articulos");
+function cargarTabla() {
   tabla.innerHTML = "";
-  datosCapturados.forEach(item => {
+  datosCapturados.forEach(dato => {
     tabla.innerHTML += `
       <tr>
-        <td>${item.nombre}</td>
-        <td>${item.cantidad}</td>
-        <td>${item.solicito}</td>
+        <td>${dato.articulo}</td>
+        <td>${dato.cantidad}</td>
+        <td>${dato.solicito}</td>
       </tr>
     `;
   });
-  document.getElementById("formulario-cocina").style.display = "block";
 }
 
 // Evitar cerrar accidentalmente
@@ -132,12 +119,14 @@ window.addEventListener('beforeunload', function (e) {
   e.returnValue = '';
 });
 
-// Guardar inventario
 document.getElementById("formulario-cocina").addEventListener("submit", async (e) => {
   e.preventDefault();
-  const mensaje = document.getElementById("mensaje");
-  const datosUsuario = JSON.parse(localStorage.getItem("tempDatos"));
 
+  const mensaje = document.createElement("div");
+  mensaje.classList.add("mensaje");
+  document.body.appendChild(mensaje);
+
+  const datosUsuario = JSON.parse(localStorage.getItem("tempDatos"));
   if (!datosUsuario) {
     mensaje.style.color = "red";
     mensaje.textContent = "❌ No se encontraron los datos del usuario.";
@@ -145,8 +134,8 @@ document.getElementById("formulario-cocina").addEventListener("submit", async (e
   }
 
   const datos = {};
-  datosCapturados.forEach(item => {
-    datos[item.nombre] = `${item.cantidad} | Solicito: ${item.solicito}`;
+  datosCapturados.forEach(dato => {
+    datos[dato.articulo] = `${dato.cantidad} | Solicito: ${dato.solicito}`;
   });
 
   try {
@@ -163,11 +152,15 @@ document.getElementById("formulario-cocina").addEventListener("submit", async (e
         body: JSON.stringify({ ...datosUsuario, articulos: datos })
       });
     }
+
     mensaje.style.color = "green";
     mensaje.textContent = "✅ Inventario guardado exitosamente.";
     localStorage.removeItem("tempDatos");
+    localStorage.setItem("actualizarInventario", "true");
+    localStorage.setItem("actualizarCompras", "true");
     window.removeEventListener('beforeunload', () => {});
-    setTimeout(() => window.close(), 1000);
+    setTimeout(() => window.close(), 1200);
+
   } catch (error) {
     console.error(error);
     mensaje.style.color = "red";
@@ -175,7 +168,8 @@ document.getElementById("formulario-cocina").addEventListener("submit", async (e
   }
 });
 
-iniciarCaptura();
+// Comienza inmediatamente
+mostrarModal();
 </script>
 
 </body>
