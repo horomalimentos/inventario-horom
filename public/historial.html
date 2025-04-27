@@ -4,25 +4,25 @@
   <meta charset="UTF-8">
   <title>Historial de Modificaciones</title>
   <style>
-    body { font-family: Arial, sans-serif; text-align: center; padding: 20px; }
-    select, button { padding: 10px; margin: 10px; width: 300px; border: 1px solid #ccc; border-radius: 5px; }
-    table { margin: auto; margin-top: 20px; border-collapse: collapse; width: 80%; }
-    th, td { border: 1px solid #ccc; padding: 10px; }
-    th { background-color: #f2f2f2; }
+    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
     h2 { margin-bottom: 20px; }
+    table { width: 95%; margin: auto; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; }
+    input[type="date"] { padding: 6px; margin-bottom: 15px; font-size: 14px; }
+    .mensaje { margin: 10px; font-size: 14px; color: red; }
+    .footer { margin-top: 30px; font-size: 12px; color: gray; }
+    @media (max-width: 600px) {
+      table { font-size: 12px; }
+      th, td { padding: 5px; }
+    }
   </style>
 </head>
 <body>
 
-<h2>Historial de Modificaciones 📋</h2>
+<h2>Historial de Modificaciones 🛠️</h2>
 
-<select id="inventario-select">
-  <option value="" disabled selected>Selecciona un Inventario</option>
-</select>
-
-<button onclick="mostrarHistorial()">Ver Historial</button>
-
-<table id="tabla-historial" style="display:none;">
+<table>
   <thead>
     <tr>
       <th>Usuario</th>
@@ -30,46 +30,61 @@
       <th>Fecha y Hora</th>
     </tr>
   </thead>
-  <tbody id="historial-body"></tbody>
+  <tbody id="tabla-historial"></tbody>
 </table>
 
+<div class="mensaje" id="mensaje"></div>
+
+<div class="footer">
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</div>
+
 <script>
-let inventarios = [];
+const server = "https://inventario-horom-production.up.railway.app";
 
-async function cargarInventarios() {
-  const res = await fetch("http://localhost:3000/nombres");
-  inventarios = await res.json();
-  const select = document.getElementById("inventario-select");
-  select.innerHTML = '<option value="" disabled selected>Selecciona un Inventario</option>';
-  
-  inventarios.forEach(inv => {
-    const fecha = new Date(inv.creadoEn).toLocaleDateString();
-    select.innerHTML += `<option value="${inv._id}">${fecha} - ${inv.ubicacion} - ${inv.area}</option>`;
-  });
-}
+async function cargarHistorial() {
+  try {
+    const res = await fetch(`${server}/nombres`);
+    const inventarios = await res.json();
+    const tabla = document.getElementById("tabla-historial");
+    tabla.innerHTML = "";
 
-async function mostrarHistorial() {
-  const id = document.getElementById("inventario-select").value;
-  if (!id) return alert("Selecciona un inventario primero.");
+    let historialTotal = [];
 
-  const inventario = inventarios.find(i => i._id === id);
-
-  const tbody = document.getElementById("historial-body");
-  tbody.innerHTML = "";
-
-  if (!inventario.historial || inventario.historial.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="3">Sin modificaciones registradas.</td></tr>`;
-  } else {
-    inventario.historial.forEach(h => {
-      const fecha = new Date(h.fecha).toLocaleString();
-      tbody.innerHTML += `<tr><td>${h.usuario}</td><td>${h.accion}</td><td>${fecha}</td></tr>`;
+    inventarios.forEach(inv => {
+      (inv.historial || []).forEach(h => {
+        historialTotal.push({
+          usuario: h.usuario,
+          accion: h.accion,
+          fecha: new Date(h.fecha).toLocaleString("es-MX")
+        });
+      });
     });
-  }
 
-  document.getElementById("tabla-historial").style.display = "table";
+    historialTotal.sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+
+    if (historialTotal.length === 0) {
+      document.getElementById("mensaje").textContent = "⚠️ No hay modificaciones registradas.";
+    } else {
+      document.getElementById("mensaje").textContent = "";
+      historialTotal.forEach(h => {
+        const fila = document.createElement("tr");
+        fila.innerHTML = `
+          <td>${h.usuario}</td>
+          <td>${h.accion}</td>
+          <td>${h.fecha}</td>
+        `;
+        tabla.appendChild(fila);
+      });
+    }
+
+  } catch (error) {
+    console.error(error);
+    document.getElementById("mensaje").textContent = "❌ Error al cargar historial.";
+  }
 }
 
-cargarInventarios();
+cargarHistorial();
 </script>
 
 </body>
