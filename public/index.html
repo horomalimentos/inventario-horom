@@ -3,66 +3,58 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Inicio - Inventario Horom</title>
+  <title>Inventario Horom - Inicio</title>
   <style>
-    body {font-family: Arial, sans-serif; text-align: center; margin: 30px; background: #f9f9f9;}
-    h2 {margin-bottom: 10px;}
-    .loader {display: none; margin: 10px; color: gray;}
-    .boton {display: block; width: 90%; max-width: 300px; margin: 10px auto; padding: 15px; background-color: #e74c3c; color: white; border: none; border-radius: 5px; font-size: 16px; cursor: pointer;}
-    .boton:hover {background-color: #c0392b;}
-    #fecha-hora {margin-top: 10px; font-size: 14px; color: #555;}
-    footer {margin-top: 30px; font-size: 12px; color: gray;}
-    @media (max-width: 600px) {
-      .boton {font-size: 14px; padding: 12px;}
-    }
+    body { font-family: Arial, sans-serif; margin: 30px; text-align: center; }
+    button { padding: 10px 20px; margin: 10px; font-size: 16px; border: none; border-radius: 5px; cursor: pointer; }
+    .boton { background-color: #e74c3c; color: white; }
+    #info-usuario { position: fixed; top: 10px; right: 10px; font-size: 14px; color: gray; }
+    footer { margin-top: 50px; font-size: 12px; color: gray; }
+    #loader { display: none; font-size: 14px; color: #555; }
   </style>
 </head>
 <body>
 
-<h2>Panel Principal - Inventario Horom</h2>
-<div id="fecha-hora"></div>
-<div class="loader" id="loader">Cargando...</div>
+<div id="info-usuario">Usuario: Cargando...</div>
+<button onclick="cerrarSesion()" style="position: fixed; top: 10px; left: 10px; background:red; color:white;">Cerrar Sesión</button>
 
-<button class="boton" onclick="redirigir('capturar.html')">Capturar Inventario</button>
-<button class="boton" onclick="redirigir('ver-nombres.html')">Ver Inventarios</button>
-<button class="boton" onclick="redirigir('compras.html')">Compras</button>
-<button class="boton" onclick="redirigir('nomina.html')">Nómina</button>
-<button class="boton" onclick="redirigir('prestamos.html')">Préstamos</button>
-<button class="boton" onclick="redirigir('horarios.html')">Horarios</button>
-<button class="boton" onclick="redirigir('ahorro.html')">Ahorro</button>
-<button class="boton" onclick="redirigir('configuracion.html')">Configuración ⚙️</button>
+<h1>Menú Principal</h1>
+
+<div id="loader">Cargando...</div>
+
+<button class="boton" onclick="redirigir('capturar.html')">Capturar Inventario</button><br>
+<button class="boton" onclick="redirigir('nomina.html')">Nómina</button><br>
+<button class="boton" onclick="redirigir('prestamos.html')">Préstamos</button><br>
+<button class="boton" onclick="redirigir('horario.html')">Horario</button><br>
+<button class="boton" onclick="redirigir('ahorro.html')">Ahorro</button><br>
+<button class="boton" onclick="redirigir('ver-nombres.html')">Ver Inventarios</button><br>
+<button class="boton" onclick="redirigir('compras.html')">Compras</button><br>
+<button class="boton" onclick="redirigir('configuracion.html')">Configuración</button><br>
 
 <footer>
-  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
+  Aplicación para administración de inventarios para PYMES &mdash; Alejandro Ornelas &mdash; Orom Soluciones
 </footer>
 
 <script>
-const server = "https://inventario-horom-production.up.railway.app";
-
-// Mostrar fecha y hora actual
-function mostrarFechaHora() {
-  const now = new Date();
-  const opciones = {weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'};
-  document.getElementById('fecha-hora').textContent = now.toLocaleDateString('es-MX', opciones);
-}
-mostrarFechaHora();
-
 // Validar sesión
-function validarSesion() {
-  const usuario = localStorage.getItem("usuarioActivo");
-  if (!usuario) {
-    window.location.href = "login.html";
-  }
+if (!localStorage.getItem("usuarioActivo")) {
+  window.location.href = "login.html";
 }
 
-validarSesion();
+// Mostrar usuario
+const usuarioActivo = localStorage.getItem("usuarioActivo");
+if (usuarioActivo) {
+  document.getElementById("info-usuario").textContent = `Usuario: ${usuarioActivo}`;
+}
 
-// Redirigir
+function cerrarSesion() {
+  localStorage.removeItem("usuarioActivo");
+  localStorage.removeItem("idUsuarioActivo");
+  window.location.href = "login.html";
+}
+
 function redirigir(pagina) {
-  document.getElementById("loader").style.display = "block";
-  setTimeout(() => {
-    window.location.href = pagina;
-  }, 300);
+  window.location.href = pagina;
 }
 </script>
 
