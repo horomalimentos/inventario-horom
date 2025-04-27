@@ -1,1 +1,179 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Administrador de Artículos</title>
+  <style>
+    body {font-family: Arial, sans-serif; margin: 20px; text-align: center;}
+    h2 {margin-bottom: 20px;}
+    table {width: 100%; margin: auto; border-collapse: collapse; font-size: 14px;}
+    th, td {border: 1px solid #ccc; padding: 8px; text-align: center;}
+    th {background-color: #f2f2f2; cursor: pointer;}
+    input, select, button {padding: 8px; margin: 5px; border-radius: 5px; border: 1px solid #ccc; font-size: 14px;}
+    button {background-color: #e74c3c; color: white; cursor: pointer;}
+    button:hover {background-color: #c0392b;}
+    .loader {display: none; margin: 20px; font-size: 16px; color: #555;}
+    footer {margin-top: 20px; font-size: 12px; color: gray;}
+  </style>
+</head>
+<body>
 
+<h2>Administrador de Artículos 📦</h2>
+
+<div id="loader" class="loader">Cargando datos, por favor espera...</div>
+
+<!-- Formulario de Nuevo Artículo -->
+<form id="form-nuevo-articulo">
+  <input id="nombreArticulo" placeholder="Nombre del Artículo" required><br>
+  <select id="proveedorArticulo" required></select>
+  <button type="button" onclick="nuevoProveedor()">+ Proveedor</button><br>
+  <select id="areaArticulo" required>
+    <option disabled selected>Selecciona Área</option>
+    <option value="Caja">Caja</option>
+    <option value="Sushi">Sushi</option>
+    <option value="Cocina">Cocina</option>
+  </select><br>
+  <select id="tipoMedicion" required>
+    <option disabled selected>Tipo de Medición</option>
+    <option>pieza</option>
+    <option>kilo</option>
+    <option>litro</option>
+    <option>costal</option>
+    <option>paquete</option>
+    <option>cubeta</option>
+    <option>galon</option>
+  </select><br>
+  <input type="number" id="costoArticulo" placeholder="Costo inicial" step="0.01" required><br>
+  <button type="submit">Agregar Artículo</button>
+</form>
+
+<br><button onclick="regresarInicio()">Regresar a Inicio</button>
+
+<table id="tabla-articulos">
+  <thead>
+    <tr>
+      <th>Nombre</th>
+      <th>Proveedor</th>
+      <th>Área</th>
+      <th>Medición</th>
+      <th>Costo Actual</th>
+      <th>Historial</th>
+      <th>Editar</th>
+      <th>Eliminar</th>
+    </tr>
+  </thead>
+  <tbody></tbody>
+</table>
+
+<footer>
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</footer>
+
+<script>
+const SERVER = "https://inventario-horom-production.up.railway.app";
+
+async function validarSuper(){
+  const clave = prompt("Introduce supercontraseña:");
+  if (clave !== "Pelon93."){
+    alert("❌ Acceso denegado");
+    location.href = "index.html";
+  }
+}
+
+function regresarInicio(){
+  location.href = "index.html";
+}
+
+async function cargarProveedores(){
+  const res = await fetch(`${SERVER}/proveedores`);
+  const datos = await res.json();
+  const proveedorSelect = document.getElementById("proveedorArticulo");
+  proveedorSelect.innerHTML = '<option disabled selected>Selecciona Proveedor</option>';
+  datos.forEach(p => {
+    proveedorSelect.innerHTML += `<option value="${p.nombreProveedor}">${p.nombreProveedor}</option>`;
+  });
+}
+
+async function nuevoProveedor(){
+  const nuevo = prompt("Nombre del nuevo proveedor:");
+  if(nuevo){
+    await fetch(`${SERVER}/proveedores`, {
+      method: "POST",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({nombreProveedor: nuevo})
+    });
+    cargarProveedores();
+  }
+}
+
+async function agregarArticulo(e){
+  e.preventDefault();
+  const articulo = {
+    nombre: document.getElementById("nombreArticulo").value.trim(),
+    proveedor: document.getElementById("proveedorArticulo").value,
+    area: document.getElementById("areaArticulo").value,
+    tipoMedicion: document.getElementById("tipoMedicion").value,
+    costoActual: parseFloat(document.getElementById("costoArticulo").value),
+    historialCostos: []
+  };
+  await fetch(`${SERVER}/articulos`, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify(articulo)
+  });
+  cargarArticulos();
+  document.getElementById("form-nuevo-articulo").reset();
+}
+
+async function cargarArticulos(){
+  const loader = document.getElementById("loader");
+  loader.style.display = "block";
+  const res = await fetch(`${SERVER}/articulos`);
+  const datos = await res.json();
+  const tbody = document.querySelector("#tabla-articulos tbody");
+  tbody.innerHTML = "";
+
+  datos.forEach(a => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>${a.nombre}</td>
+      <td>${a.proveedor}</td>
+      <td>${a.area}</td>
+      <td>${a.tipoMedicion}</td>
+      <td>$${a.costoActual.toFixed(2)}</td>
+      <td><button onclick="verHistorial('${a._id}')">Ver</button></td>
+      <td><button onclick="editarArticulo('${a._id}')">Editar</button></td>
+      <td><button onclick="eliminarArticulo('${a._id}')">Eliminar</button></td>
+    `;
+    tbody.appendChild(fila);
+  });
+
+  loader.style.display = "none";
+}
+
+async function eliminarArticulo(id){
+  if(confirm("¿Seguro de eliminar el artículo?")){
+    await fetch(`${SERVER}/articulos/${id}`, {method: "DELETE"});
+    cargarArticulos();
+  }
+}
+
+async function verHistorial(id){
+  // Aquí podríamos abrir un modal mostrando historial (lo puedo agregar si quieres después)
+  alert("🔎 Función de historial próximamente en modal detallado.");
+}
+
+async function editarArticulo(id){
+  alert("🔧 Función de editar en desarrollo (siguiente paso)");
+}
+
+document.getElementById("form-nuevo-articulo").addEventListener("submit", agregarArticulo);
+
+validarSuper();
+cargarProveedores();
+cargarArticulos();
+</script>
+
+</body>
+</html>
