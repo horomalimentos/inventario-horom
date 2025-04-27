@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Capturar Inventario</title>
+  <style>
+    body { font-family: Arial, sans-serif; text-align: center; margin: 30px; }
+    form { background: #f9f9f9; padding: 20px; border: 1px solid #ccc; border-radius: 10px; display: inline-block; width: 95%; max-width: 400px; }
+    input, select, button { width: 90%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc; }
+    button { background-color: #e74c3c; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #c0392b; }
+    #mensaje { margin-top: 20px; font-size: 16px; color: red; }
+    #loader { display: none; margin-top: 20px; }
+    footer { margin-top: 40px; font-size: 12px; color: gray; }
+  </style>
+</head>
+<body>
+
+<h2>Captura de Inventario</h2>
+<div id="horaFecha"></div>
+
+<form id="formulario">
+  <input type="date" id="fecha" required><br>
+  <select id="ubicacion" required>
+    <option disabled selected>Selecciona Ubicación</option>
+    <option value="Zapata">Zapata</option>
+    <option value="Anapra">Anapra</option>
+  </select><br>
+  <select id="area" required>
+    <option disabled selected>Selecciona Área</option>
+    <option value="Sushi">Sushi</option>
+    <option value="Caja">Caja</option>
+    <option value="Cocina">Cocina</option>
+  </select><br>
+  <button type="submit">Validar y Continuar</button>
+</form>
+
+<div id="mensaje"></div>
+<div id="loader">Validando información...</div>
+
+<footer>
+  Aplicación para administración de inventarios para PYMES - Alejandro Ornelas - Orom Soluciones
+</footer>
+
+<script>
+const server = "https://inventario-horom-production.up.railway.app";
+
+// Verificar si está logueado
+const usuario = JSON.parse(localStorage.getItem("usuarioLogueado"));
+if (!usuario) {
+  window.location.href = "index.html";
+}
+
+// Mostrar hora y fecha actuales
+function actualizarHoraFecha() {
+  const ahora = new Date();
+  const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+  document.getElementById("horaFecha").textContent = `Fecha y hora actual: ${ahora.toLocaleDateString("es-MX", opciones)}`;
+}
+actualizarHoraFecha();
+
+// Validar formulario
+const formulario = document.getElementById("formulario");
+formulario.addEventListener("submit", async function(e) {
+  e.preventDefault();
+
+  const fecha = document.getElementById("fecha").value;
+  const ubicacion = document.getElementById("ubicacion").value;
+  const area = document.getElementById("area").value;
+  const mensaje = document.getElementById("mensaje");
+  const loader = document.getElementById("loader");
+
+  if (!fecha || !ubicacion || !area) {
+    mensaje.textContent = "❌ Todos los campos son obligatorios.";
+    return;
+  }
+
+  loader.style.display = "block";
+  mensaje.textContent = "";
+
+  try {
+    const res = await fetch(`${server}/nombres`);
+    const inventarios = await res.json();
+
+    const existe = inventarios.find(inv => {
+      const fechaInv = new Date(inv.creadoEn).toISOString().split('T')[0];
+      return fechaInv === fecha && inv.ubicacion === ubicacion && inv.area === area;
+    });
+
+    if (existe) {
+      alert("⚠️ Ya existe inventario para esa fecha, ubicación y área. Debes editar.");
+    } else {
+      localStorage.setItem("capturaDatos", JSON.stringify({ fecha, ubicacion, area }));
+      window.location.href = `${area.toLowerCase()}.html`;
+    }
+  } catch (error) {
+    console.error(error);
+    mensaje.textContent = "❌ Error al validar datos.";
+  } finally {
+    loader.style.display = "none";
+  }
+});
+</script>
+
+</body>
+</html>
 
