@@ -2,81 +2,59 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Iniciar Sesión</title>
+  <title>Login - Inventario Horom</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      text-align: center;
-      padding: 30px;
-      background: #f7f7f7;
-    }
-    form {
-      background: white;
-      padding: 25px;
-      border-radius: 10px;
-      border: 1px solid #ddd;
-      display: inline-block;
-      width: 100%;
-      max-width: 400px;
-    }
-    input, button {
-      width: 90%;
-      padding: 12px;
-      margin: 10px 0;
-      border-radius: 5px;
-      border: 1px solid #ccc;
-      font-size: 16px;
-    }
-    button {
-      background-color: #e74c3c;
-      color: white;
-      border: none;
-      cursor: pointer;
-    }
-    button:hover {
-      background-color: #c0392b;
-    }
-    .mensaje {
-      margin-top: 20px;
-      font-size: 14px;
-      color: red;
-    }
-    footer {
-      margin-top: 40px;
-      font-size: 12px;
-      color: gray;
-    }
+    body { font-family: Arial, sans-serif; background: #f7f7f7; text-align: center; padding: 50px; }
+    form { background: white; padding: 30px; border-radius: 10px; display: inline-block; width: 90%; max-width: 400px; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    input, button { width: 85%; padding: 12px; margin: 10px 0; border-radius: 5px; border: 1px solid #ccc; font-size: 16px; }
+    button { background-color: #e74c3c; color: white; border: none; cursor: pointer; }
+    button:hover { background-color: #c0392b; }
+    #mensaje { margin-top: 15px; font-size: 14px; }
+    footer { margin-top: 40px; font-size: 12px; color: gray; }
   </style>
 </head>
 <body>
 
-<h2>Bienvenido</h2>
+<h2>Inicio de Sesión</h2>
 
-<form id="form-login">
-  <input type="text" id="usuario" placeholder="Usuario" required>
-  <input type="password" id="password" placeholder="Contraseña" required>
-  <button type="submit">Ingresar</button>
+<form id="formulario-login">
+  <input type="text" id="usuario" placeholder="Usuario" required><br>
+  <input type="password" id="password" placeholder="Contraseña" required><br>
+  <button type="submit">Iniciar Sesión</button>
+  <button type="button" onclick="mostrarModalCambio()">Cambiar Contraseña</button>
 </form>
 
-<div class="mensaje" id="mensaje"></div>
+<div id="mensaje"></div>
+
+<!-- Modal para cambiar contraseña -->
+<div id="modal-cambio" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.5);">
+  <div style="background:white; margin:100px auto; padding:20px; border-radius:10px; width:90%; max-width:350px;">
+    <h3>Cambiar Contraseña</h3>
+    <input type="password" id="usuario-actual" placeholder="Usuario"><br>
+    <input type="password" id="pass-actual" placeholder="Contraseña Actual"><br>
+    <input type="password" id="pass-nueva" placeholder="Nueva Contraseña"><br>
+    <button onclick="cambiarPassword()">Guardar Cambio</button><br>
+    <button style="background:#ccc; color:black; margin-top:5px;" onclick="cerrarModalCambio()">Cancelar</button>
+  </div>
+</div>
 
 <footer>
-  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
 </footer>
 
 <script>
 const SERVER = "https://inventario-horom-production.up.railway.app";
 
-document.getElementById("form-login").addEventListener("submit", async function(e) {
+document.getElementById("formulario-login").addEventListener("submit", async function(e){
   e.preventDefault();
-  
   const usuario = document.getElementById("usuario").value.trim();
   const contraseña = document.getElementById("password").value.trim();
   const mensaje = document.getElementById("mensaje");
 
   if (!usuario || !contraseña) {
-    mensaje.textContent = "❌ Ingresa tu usuario y contraseña.";
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Debes completar todos los campos.";
     return;
   }
 
@@ -88,22 +66,79 @@ document.getElementById("form-login").addEventListener("submit", async function(
     });
 
     const data = await res.json();
-    
+
     if (data.valido) {
-      localStorage.setItem("usuarioActivo", usuario);
-      localStorage.setItem("horaLogin", new Date().toISOString());
-      window.location.href = "index.html";
+      localStorage.setItem("usuarioLogueado", JSON.stringify({ usuario }));
+      mensaje.style.color = "green";
+      mensaje.textContent = "✅ Acceso permitido. Redirigiendo...";
+      setTimeout(() => window.location.href = "index.html", 800);
     } else {
+      mensaje.style.color = "red";
       mensaje.textContent = "❌ Usuario o contraseña incorrectos.";
     }
-
   } catch (error) {
     console.error(error);
-    mensaje.textContent = "❌ Error de conexión con el servidor.";
+    mensaje.style.color = "red";
+    mensaje.textContent = "❌ Error al conectar con el servidor.";
   }
 });
+
+// Modal de cambio de contraseña
+function mostrarModalCambio(){
+  document.getElementById("modal-cambio").style.display = "block";
+}
+function cerrarModalCambio(){
+  document.getElementById("modal-cambio").style.display = "none";
+}
+
+async function cambiarPassword(){
+  const usuario = document.getElementById("usuario-actual").value.trim();
+  const actual = document.getElementById("pass-actual").value.trim();
+  const nueva = document.getElementById("pass-nueva").value.trim();
+
+  if (!usuario || !actual || !nueva) {
+    alert("❌ Todos los campos son obligatorios.");
+    return;
+  }
+
+  try {
+    const validar = await fetch(`${SERVER}/validar-usuario`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ usuario, contraseña: actual })
+    });
+    const resValidar = await validar.json();
+
+    if (!resValidar.valido) {
+      alert("❌ Usuario o contraseña actual incorrecta.");
+      return;
+    }
+
+    // Buscar ID del usuario
+    const usersRes = await fetch(`${SERVER}/usuarios-registrados`);
+    const users = await usersRes.json();
+    const user = users.find(u => u.usuario === usuario);
+
+    if (!user) {
+      alert("❌ Usuario no encontrado.");
+      return;
+    }
+
+    // Modificar contraseña
+    await fetch(`${SERVER}/modificar-usuario/${user._id}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ contraseña: nueva })
+    });
+
+    alert("✅ Contraseña actualizada correctamente.");
+    cerrarModalCambio();
+  } catch (error) {
+    console.error(error);
+    alert("❌ Error al actualizar contraseña.");
+  }
+}
 </script>
 
 </body>
 </html>
-
