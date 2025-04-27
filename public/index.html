@@ -2,11 +2,12 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Captura de Inventario</title>
   <style>
-    body {font-family: Arial, sans-serif; text-align: center; margin: 50px;}
-    form {display: inline-block; background: #f9f9f9; padding: 20px; border: 1px solid #ccc; border-radius: 10px;}
-    input, select, button {width: 300px; padding: 10px; margin: 10px; font-size: 16px; border-radius: 5px; border: 1px solid #ccc;}
+    body {font-family: Arial, sans-serif; text-align: center; margin: 30px;}
+    form {display: inline-block; background: #f9f9f9; padding: 20px; border: 1px solid #ccc; border-radius: 10px; width: 100%; max-width: 400px;}
+    input, select, button {width: 90%; padding: 10px; margin: 10px 0; font-size: 16px; border-radius: 5px; border: 1px solid #ccc;}
     button {background-color: #3498db; color: white; cursor: pointer; border: none;}
     button:hover {background-color: #2980b9;}
     #mensaje {margin-top: 20px; font-size: 16px;}
@@ -15,14 +16,15 @@
       background: rgba(0, 0, 0, 0.5); text-align: center; padding-top: 80px; z-index: 1000;
     }
     .modal-content {
-      background: white; margin: auto; padding: 20px; border-radius: 10px; width: 350px;
+      background: white; margin: auto; padding: 20px; border-radius: 10px; width: 90%; max-width: 350px;
     }
-    .modal-content input, .modal-content button, .modal-content select {width: 80%; margin: 10px;}
+    footer {margin-top: 40px; font-size: 12px; color: gray;}
+    #loader {display: none; margin-top: 15px; font-size: 14px; color: #555;}
   </style>
 </head>
 <body>
 
-<h2>Capturar Registro de Inventario</h2>
+<h2>Captura de Inventario</h2>
 
 <form id="formulario">
   <select id="usuario" required><option selected disabled>Cargando usuarios...</option></select><br>
@@ -41,12 +43,14 @@
   <button type="submit">Continuar</button>
 </form>
 
-<br><br>
+<br>
 <button onclick="mostrarModalGestion()">Gestionar Usuarios</button>
 <button onclick="mostrarModalCambio()">Cambiar Supercontraseña</button>
 <button onclick="verInventarios()">Ver Inventarios</button>
+<button onclick="verCompras()">Compras</button>
 
 <div id="mensaje"></div>
+<div id="loader">Cargando datos, por favor espera...</div>
 
 <!-- Modal Gestionar Usuarios -->
 <div id="modal-gestion" class="modal">
@@ -81,14 +85,23 @@
   </div>
 </div>
 
+<footer>
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas — Orom Soluciones
+</footer>
+
 <script>
+// CONFIGURACIÓN API
+const SERVER = "https://inventario-horom-production.up.railway.app";
+
 let inventarios = [];
 let datosPendientes = {};
-let superContraseña = "Pelon93."; // Supercontraseña inicial
+let superContraseña = "Pelon93.";
 
 async function cargarUsuarios() {
+  const loader = document.getElementById("loader");
+  loader.style.display = "block";
   try {
-    const res = await fetch("http://localhost:3000/usuarios-registrados");
+    const res = await fetch(`${SERVER}/usuarios-registrados`);
     const usuarios = await res.json();
     const select = document.getElementById("usuario");
     select.innerHTML = '<option disabled selected>Selecciona Usuario</option>';
@@ -96,13 +109,15 @@ async function cargarUsuarios() {
       select.innerHTML += `<option value="${u.usuario}">${u.usuario}</option>`;
     });
   } catch (error) {
-    console.error("Error al cargar usuarios:", error);
+    console.error(error);
+    alert("❌ Error de conexión al servidor");
   }
+  loader.style.display = "none";
 }
 
 async function cargarInventarios() {
   try {
-    const res = await fetch("http://localhost:3000/nombres");
+    const res = await fetch(`${SERVER}/nombres`);
     inventarios = await res.json();
   } catch (error) {
     console.error("Error al cargar inventarios:", error);
@@ -114,7 +129,6 @@ cargarInventarios();
 
 document.getElementById("formulario").addEventListener("submit", async function(e) {
   e.preventDefault();
-  
   const usuario = document.getElementById("usuario").value;
   const contraseña = document.getElementById("usuario-pass").value;
   const ubicacion = document.getElementById("ubicacion").value;
@@ -128,7 +142,7 @@ document.getElementById("formulario").addEventListener("submit", async function(
   }
 
   try {
-    const res = await fetch("http://localhost:3000/validar-usuario", {
+    const res = await fetch(`${SERVER}/validar-usuario`, {
       method: "POST",
       headers: {"Content-Type": "application/json"},
       body: JSON.stringify({usuario, contraseña})
@@ -149,7 +163,6 @@ document.getElementById("formulario").addEventListener("submit", async function(
     datosPendientes = { nombre: usuario, ubicacion, area, usuario };
 
     if (existe) {
-      // Pide otra vez contraseña antes de corregir
       const nuevaClave = prompt("⚠️ Ya existe inventario. Reconfirma tu contraseña:");
       if (nuevaClave !== contraseña) {
         alert("❌ Contraseña incorrecta.");
@@ -169,7 +182,7 @@ document.getElementById("formulario").addEventListener("submit", async function(
       }, 500);
     }
   } catch (error) {
-    console.error("Error al validar:", error);
+    console.error("Error al validar usuario:", error);
   }
 });
 
@@ -179,7 +192,6 @@ function cargarArticulos(area) {
     "Caja": ["CONO CHICO","CONO GDE","QUESOCREMA","COCA VIDRIO","COCACOLA","COCACOLA 2L","FANTA","FRESCA","MANZANITA","SPRITE","RANCH","AGUA 1LT","BOLSA CAM","BOLSA DE KG","SERVILLETAS","TENEDOR","CURTIDOS NACHOS GDE","QUESO AMAR","ESCOBA","PAPEL BAÑO","RAID MOSC","LIMON","HAPPY BOX","MINI BOX","CHAROLA","TAKIS","ANGUILA","SALSA HABANERO","TARTARA","PALILLOS","COFIAS","CLORO","FABULOSO","JABON","ROLLO IMPRE"],
     "Cocina": ["AROS DE CEBOLLA","BISTEK PICADO","DEDOS DE Q","TOCINO","SALCHICHA","ARROZ MEX","AZUCAR","HARINA","HUEVO","MAIZENA","PIMIENTA","SAL","BBQ","BUFALO","KETCHUP STARVALUE","MANGO HABAN","MAYONESA STARVALUE","AJO","AJO MOLIDO","ANIS","CHIL ARBOL","GENGIBRE","ALUMINIO GDE","PAPEL CEBOLLA","PIEDRA PLANCHA","PLATO 7","TAPA 1 LT","TAPA 2 OZ","VASO 1 LT","VASO 2 OZ","CHIPOTLE LATA GDE","KETCHUP HUNTS","BOLSA NEGR","DESENGRASANTE","FIBRAS","PAPEL CANELA","TRAPEADOR","CALABAZA","CEBOLLA","CEBOLLIN","HABANERO","JALAPEÑO","MORRON AM","MORRON VE","PAPA COSTAL","ZANAHORIA","CONCENTRADO SAMBAL","ACEITE","COLORANTE","PARMESANO","PIMI LIMON","AJINOMOTO","DASHI","SOYA KIKOMA","SOYA LUCKY","TOGARACHI","ALITAS","PAPA BOLSA","PECHUGA","PUERCO","TRAPOS","ENCENDEDOR","BROCOLI"]
   };
-
   const select = document.getElementById("select-articulo");
   select.innerHTML = '<option disabled selected>Selecciona artículo</option>';
   articulos[area].forEach(a => {
@@ -232,7 +244,6 @@ function cerrarModalCambio() {
 function cambiarSuper() {
   const actual = document.getElementById("pass-actual").value;
   const nueva = document.getElementById("pass-nueva").value;
-
   if (actual !== superContraseña) {
     alert("❌ Contraseña actual incorrecta.");
     return;
@@ -249,18 +260,11 @@ function cambiarSuper() {
 function verInventarios() {
   window.open("ver-nombres.html", "_blank");
 }
+
+function verCompras() {
+  window.open("compras.html", "_blank");
+}
 </script>
 
 </body>
-<script>
-  // Actualizar página automáticamente cuando haya cambios en otras ventanas
-  window.addEventListener("storage", function(e) {
-    if (e.key === "actualizarInventario" && e.newValue === "true") {
-      console.log("🔄 Cambio detectado, actualizando página...");
-      location.reload();
-    }
-  });
-  </script>
-  
-
 </html>
