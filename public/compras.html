@@ -2,184 +2,164 @@
 <html lang="es">
 <head>
   <meta charset="UTF-8">
-  <title>Compras Inventarios</title>
+  <title>Compras - Inventario</title>
   <style>
-    body {font-family: Arial, sans-serif; margin: 20px;}
-    h2 {text-align: center; margin-bottom: 20px;}
-    #filtros {text-align: center;}
-    table {width: 100%; border-collapse: collapse; margin-top: 20px;}
-    th, td {padding: 10px; border: 1px solid #ccc; text-align: center;}
-    th {background-color: #f2f2f2; cursor: pointer;}
-    input[type="date"], button {padding: 10px; margin: 10px; font-size: 16px;}
-    button {background-color: #3498db; color: white; border: none; border-radius: 5px; cursor: pointer;}
-    button:hover {background-color: #2980b9;}
+    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
+    h2 { margin-bottom: 20px; }
+    table { width: 100%; margin: auto; border-collapse: collapse; font-size: 14px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+    th { background-color: #f2f2f2; cursor: pointer; }
+    input[type="date"] { padding: 6px; margin-bottom: 15px; font-size: 14px; }
+    .mensaje { margin: 10px; font-size: 14px; color: red; }
+    .footer { margin-top: 30px; font-size: 12px; color: gray; }
+    @media (max-width: 600px) {
+      table { font-size: 12px; }
+      th, td { padding: 4px; }
+      input[type="date"] { width: 90%; }
+    }
   </style>
 </head>
 <body>
 
-<h2>Compras Inventarios 📦</h2>
+<h2>Compras - Reporte de Inventarios 🛒</h2>
 
-<div id="filtros">
-  <label for="fecha">Selecciona Fecha:</label>
-  <input type="date" id="fecha">
-  <button onclick="descargarPDF()">Descargar en PDF</button>
-</div>
+<input type="date" id="filtroFecha">
+<button onclick="filtrarFecha()">Filtrar</button>
+
+<div class="mensaje" id="mensaje"></div>
 
 <table id="tabla-compras">
   <thead>
     <tr>
-      <th onclick="ordenarTabla(0)">Fecha 📅</th>
-      <th onclick="ordenarTabla(1)">Usuario 👤</th>
-      <th onclick="ordenarTabla(2)">Ubicación 📍</th>
-      <th onclick="ordenarTabla(3)">Área 🍣📦👨‍🍳</th>
-      <th onclick="ordenarTabla(4)">Proveedor 🏪</th>
-      <th onclick="ordenarTabla(5)">Artículo 🛒</th>
-      <th onclick="ordenarTabla(6)">Solicito ✅</th>
-      <th onclick="ordenarTabla(7)">Anapra 📍</th>
-      <th onclick="ordenarTabla(8)">Zapata 📍</th>
+      <th onclick="ordenarTabla(0)">Fecha</th>
+      <th onclick="ordenarTabla(1)">Usuario</th>
+      <th onclick="ordenarTabla(2)">Ubicación</th>
+      <th onclick="ordenarTabla(3)">Área</th>
+      <th onclick="ordenarTabla(4)">Artículo</th>
+      <th onclick="ordenarTabla(5)">Cantidad</th>
+      <th onclick="ordenarTabla(6)">Solicitó</th>
     </tr>
   </thead>
-  <tbody id="compras-body"></tbody>
+  <tbody id="tbody-compras"></tbody>
 </table>
 
-<!-- Librería html2pdf.js -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<div class="footer">
+  Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
+</div>
 
 <script>
-// Variables
-let inventarios = [];
-let ordenAsc = true;
+const server = "https://inventario-horom-production.up.railway.app";
+let datosGlobal = [];
 
-// Tu lista de proveedores aquí (como la que ya tenías)
-const proveedores = {
-  // (tu lista de proveedores aquí)
-};
+async function cargarDatos() {
+  try {
+    const res = await fetch(`${server}/nombres`);
+    const inventarios = await res.json();
+    datosGlobal = [];
 
-// Funciones principales
-async function cargarInventarios() {
-  const res = await fetch("http://localhost:3000/nombres");
-  inventarios = await res.json();
+    inventarios.forEach(inv => {
+      const fecha = new Date(inv.creadoEn).toLocaleDateString("es-MX", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+      for (const [articulo, cantidadSolicito] of Object.entries(inv.articulos || {})) {
+        const [cantidad, solicitoParte] = cantidadSolicito.split('|').map(x => x.trim());
+        const solicito = solicitoParte?.replace('Solicito:', '').trim() || "No";
+        datosGlobal.push({
+          fecha,
+          usuario: inv.nombre,
+          ubicacion: inv.ubicacion,
+          area: inv.area,
+          articulo,
+          cantidad,
+          solicito
+        });
+      }
+    });
+
+    pintarTabla(datosGlobal);
+  } catch (error) {
+    console.error(error);
+    document.getElementById("mensaje").textContent = "❌ Error al cargar inventarios.";
+  }
 }
 
-function mostrarCompras() {
-  const fechaFiltro = document.getElementById("fecha").value;
-  const tbody = document.getElementById("compras-body");
+function pintarTabla(datos) {
+  const tbody = document.getElementById("tbody-compras");
   tbody.innerHTML = "";
 
-  if (!fechaFiltro) return;
-
-  let encontrados = false;
-
-  inventarios.forEach(inv => {
-    const fechaInv = new Date(inv.creadoEn);
-    const fechaInvISO = fechaInv.toISOString().slice(0, 10); // yyyy-mm-dd
-    const fechaFiltroISO = fechaFiltro; // ya es yyyy-mm-dd
-
-    if (fechaInvISO !== fechaFiltroISO) return;
-
-    encontrados = true;
-
-    if (inv.articulos) {
-      for (const [articulo, data] of Object.entries(inv.articulos)) {
-        const solicito = data.solicito || "no";
-        const cantidad = data.cantidad ?? 0;
-
-        let cantidadAnapra = "-";
-        let cantidadZapata = "-";
-
-        if (inv.ubicacion === "Anapra") cantidadAnapra = cantidad;
-        if (inv.ubicacion === "Zapata") cantidadZapata = cantidad;
-
-        const proveedor = proveedores[articulo] || "OTRO";
-
-        tbody.innerHTML += `
-          <tr>
-            <td>${fechaInv.toLocaleDateString()}</td>
-            <td>${inv.nombre}</td>
-            <td>${inv.ubicacion}</td>
-            <td>${inv.area}</td>
-            <td>${proveedor}</td>
-            <td>${articulo}</td>
-            <td>${solicito === "si" ? "✅" : "❌"}</td>
-            <td>${cantidadAnapra}</td>
-            <td>${cantidadZapata}</td>
-          </tr>
-        `;
-      }
-    }
-  });
-
-  if (!encontrados) {
-    tbody.innerHTML = `<tr><td colspan="9">⚠️ No se encontraron resultados para esta fecha.</td></tr>`;
+  if (datos.length === 0) {
+    document.getElementById("mensaje").textContent = "⚠️ No hay datos disponibles.";
+    return;
+  } else {
+    document.getElementById("mensaje").textContent = "";
   }
+
+  datos.forEach(d => {
+    const fila = document.createElement("tr");
+    fila.innerHTML = `
+      <td>${d.fecha}</td>
+      <td>${d.usuario}</td>
+      <td>${d.ubicacion}</td>
+      <td>${d.area}</td>
+      <td>${d.articulo}</td>
+      <td>${d.cantidad}</td>
+      <td>${d.solicito}</td>
+    `;
+    tbody.appendChild(fila);
+  });
 }
 
 function ordenarTabla(n) {
-  const table = document.getElementById("tabla-compras");
+  const tabla = document.getElementById("tabla-compras");
   let switching = true;
-  let dir = ordenAsc ? "asc" : "desc";
-  ordenAsc = !ordenAsc;
+  let dir = "asc";
+  let switchcount = 0;
 
   while (switching) {
     switching = false;
-    const rows = table.rows;
+    const rows = tabla.rows;
     for (let i = 1; i < (rows.length - 1); i++) {
-      let shouldSwitch = false;
-      let x = rows[i].getElementsByTagName("TD")[n];
-      let y = rows[i + 1].getElementsByTagName("TD")[n];
-      let xContent = x.innerText.toLowerCase();
-      let yContent = y.innerText.toLowerCase();
+      let debeCambiar = false;
+      const x = rows[i].getElementsByTagName("TD")[n];
+      const y = rows[i + 1].getElementsByTagName("TD")[n];
 
-      if (!isNaN(xContent) && !isNaN(yContent)) {
-        xContent = parseFloat(xContent);
-        yContent = parseFloat(yContent);
+      if (dir === "asc") {
+        if (x.innerHTML.toLowerCase() > y.innerHTML.toLowerCase()) {
+          debeCambiar = true;
+          break;
+        }
+      } else if (dir === "desc") {
+        if (x.innerHTML.toLowerCase() < y.innerHTML.toLowerCase()) {
+          debeCambiar = true;
+          break;
+        }
       }
-
-      if (dir === "asc" && xContent > yContent) shouldSwitch = true;
-      if (dir === "desc" && xContent < yContent) shouldSwitch = true;
-
-      if (shouldSwitch) {
-        rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+    }
+    if (debeCambiar) {
+      rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+      switching = true;
+      switchcount++;
+    } else {
+      if (switchcount === 0 && dir === "asc") {
+        dir = "desc";
         switching = true;
-        break;
       }
     }
   }
 }
 
-function descargarPDF() {
-  const fechaInput = document.getElementById("fecha").value;
+function filtrarFecha() {
+  const fechaInput = document.getElementById("filtroFecha").value;
   if (!fechaInput) {
-    alert("⚠️ Por favor selecciona una fecha primero.");
+    pintarTabla(datosGlobal);
     return;
   }
 
-  const fecha = new Date(fechaInput);
-  const opciones = { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' };
-  const fechaFormateada = fecha.toLocaleDateString('es-ES', opciones)
-    .replace(",", "")
-    .replace(/\b\w/g, c => c.toUpperCase());
+  const fechaBuscada = new Date(fechaInput).toLocaleDateString("es-MX", { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+  const datosFiltrados = datosGlobal.filter(d => d.fecha === fechaBuscada);
 
-  const opt = {
-    margin: 0.3,
-    filename: `Compras_${fechaFormateada.replace(/\s/g, "_")}.pdf`,
-    image: { type: 'jpeg', quality: 0.98 },
-    html2canvas: { scale: 2 },
-    jsPDF: { unit: 'in', format: 'a4', orientation: 'landscape' }
-  };
-
-  html2pdf().from(document.getElementById("tabla-compras")).set(opt).save();
+  pintarTabla(datosFiltrados);
 }
 
-// Inicializar
-cargarInventarios();
-document.getElementById("fecha").addEventListener("change", mostrarCompras);
-
-window.addEventListener("storage", function(e) {
-  if (e.key === "actualizarInventario" && e.newValue === "true") {
-    cargarInventarios();
-  }
-});
+cargarDatos();
 </script>
 
 </body>
