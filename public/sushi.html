@@ -4,14 +4,15 @@
   <meta charset="UTF-8">
   <title>Inventario Área Sushi 🍣</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; text-align: center; }
-    h2 { margin-bottom: 20px; }
-    table { width: 95%; margin: auto; border-collapse: collapse; font-size: 15px; }
+    body { font-family: Arial, sans-serif; text-align: center; margin: 20px; }
+    table { width: 95%; margin: auto; border-collapse: collapse; margin-top: 20px; }
     th, td { padding: 8px; border: 1px solid #ccc; text-align: center; }
     th { background-color: #f2f2f2; }
     button { margin-top: 20px; padding: 10px 20px; font-size: 15px; background-color: #28a745; color: white; border: none; border-radius: 5px; cursor: pointer; }
     button:hover { background-color: #218838; }
     .mensaje { margin-top: 15px; font-size: 16px; }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); text-align: center; padding-top: 80px; }
+    .modal-content { background: white; padding: 20px; border-radius: 10px; width: 350px; margin: auto; }
     .footer { margin-top: 30px; font-size: 12px; color: gray; }
   </style>
 </head>
@@ -19,22 +20,29 @@
 
 <h2>Inventario Área Sushi 🍣</h2>
 
-<div id="formulario-sushi" style="display:none;">
+<form id="formulario-sushi" style="display:none;">
   <table>
     <thead>
-      <tr>
-        <th>Artículo</th>
-        <th>Cantidad</th>
-        <th>¿Solicitó?</th>
-      </tr>
+      <tr><th>Artículo</th><th>Cantidad</th><th>Solicitó</th></tr>
     </thead>
     <tbody id="tabla-articulos"></tbody>
   </table>
 
-  <button id="btn-guardar">Guardar Inventario</button>
+  <button type="submit" id="btn-guardar">Guardar Inventario</button>
+</form>
+
+<div id="mensaje" class="mensaje"></div>
+
+<!-- Modal de Captura -->
+<div id="modal-captura" class="modal">
+  <div class="modal-content">
+    <h3 id="nombre-articulo"></h3>
+    <input type="number" id="cantidad" placeholder="Cantidad" min="0" required><br><br>
+    <label><input type="checkbox" id="solicito"> Solicitó</label><br><br>
+    <button onclick="capturarDatos()">Siguiente</button>
+  </div>
 </div>
 
-<div class="mensaje" id="mensaje"></div>
 <div class="footer">
   Aplicación para administración de inventarios para PYMES — Alejandro Ornelas Orom Soluciones
 </div>
@@ -49,68 +57,78 @@ const articulos = [
 
 const server = "https://inventario-horom-production.up.railway.app";
 const datosCapturados = {};
-let indexActual = 0;
+let indiceActual = 0;
 
-// Capturar artículo por artículo
-function capturarArticulo() {
-  if (indexActual >= articulos.length) {
-    mostrarFormularioCompleto();
+function mostrarModal(){
+  document.getElementById("modal-captura").style.display = "block";
+  document.getElementById("nombre-articulo").textContent = articulos[indiceActual];
+  document.getElementById("cantidad").value = "";
+  document.getElementById("solicito").checked = false;
+}
+
+function capturarDatos(){
+  const cantidad = document.getElementById("cantidad").value.trim();
+  const solicito = document.getElementById("solicito").checked ? "Si" : "No";
+
+  if(cantidad === ""){
+    alert("❌ Debes capturar una cantidad.");
     return;
   }
 
-  const nombreArticulo = articulos[indexActual];
-  const cantidad = prompt(`Cantidad para ${nombreArticulo}:`, "0");
+  datosCapturados[articulos[indiceActual]] = `${cantidad} | Solicito: ${solicito}`;
 
-  if (cantidad === null || cantidad.trim() === "") {
-    alert("❌ Debes ingresar una cantidad.");
-    return capturarArticulo();
+  indiceActual++;
+
+  if(indiceActual < articulos.length){
+    mostrarModal();
+  }else{
+    document.getElementById("modal-captura").style.display = "none";
+    mostrarTabla();
   }
-
-  const solicito = confirm(`¿Solicitó ${nombreArticulo}?`) ? "Sí" : "No";
-
-  datosCapturados[nombreArticulo] = `${cantidad.trim()} | Solicito: ${solicito}`;
-  indexActual++;
-  capturarArticulo();
 }
 
-// Mostrar tabla final
-function mostrarFormularioCompleto() {
-  const tabla = document.getElementById("tabla-articulos");
-  tabla.innerHTML = "";
+function mostrarTabla(){
+  const tbody = document.getElementById("tabla-articulos");
+  tbody.innerHTML = "";
 
-  for (const nombre of articulos) {
-    const [cantidad, solicitado] = datosCapturados[nombre]?.split('| Solicito: ') || ["0", "No"];
-    tabla.innerHTML += `
-      <tr>
-        <td>${nombre}</td>
-        <td>${cantidad}</td>
-        <td>${solicitado}</td>
-      </tr>
-    `;
+  for(const [articulo, datos] of Object.entries(datosCapturados)){
+    const fila = document.createElement("tr");
+    const [cantidad, solicitud] = datos.split("|");
+    fila.innerHTML = `<td>${articulo}</td><td>${cantidad.trim()}</td><td>${solicitud.trim()}</td>`;
+    tbody.appendChild(fila);
   }
 
   document.getElementById("formulario-sushi").style.display = "block";
 }
 
-// Guardar en la base de datos
-document.getElementById("btn-guardar").addEventListener("click", async () => {
+// Evitar cerrar accidentalmente
+window.addEventListener('beforeunload', function (e) {
+  e.preventDefault();
+  e.returnValue = '';
+});
+
+// Guardar inventario
+
+document.getElementById("formulario-sushi").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
   const mensaje = document.getElementById("mensaje");
   const datosUsuario = JSON.parse(localStorage.getItem("tempDatos"));
 
-  if (!datosUsuario) {
+  if(!datosUsuario){
     mensaje.style.color = "red";
     mensaje.textContent = "❌ No se encontraron los datos del usuario.";
     return;
   }
 
-  try {
-    if (datosUsuario.modoEdicion) {
+  try{
+    if(datosUsuario.modoEdicion){
       await fetch(`${server}/editar-nombre/${datosUsuario.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ articulos: datosCapturados, usuario: datosUsuario.usuario })
       });
-    } else {
+    }else{
       await fetch(`${server}/guardar-nombre`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -124,17 +142,19 @@ document.getElementById("btn-guardar").addEventListener("click", async () => {
     mensaje.style.color = "green";
     mensaje.textContent = "✅ Inventario guardado exitosamente.";
     localStorage.removeItem("tempDatos");
+    window.localStorage.setItem("actualizarInventario", "true");
+    window.removeEventListener('beforeunload', () => {});
+
     setTimeout(() => window.close(), 1000);
 
-  } catch (error) {
+  }catch(error){
     console.error(error);
     mensaje.style.color = "red";
     mensaje.textContent = "❌ Error al guardar el inventario.";
   }
 });
 
-// Iniciar captura
-capturarArticulo();
+mostrarModal();
 </script>
 
 </body>
