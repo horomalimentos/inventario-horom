@@ -21,6 +21,7 @@ mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://horomalimentos:Pelon9
 // Modelos
 // -------------------------------------------------------------
 
+// Inventarios
 const Usuario = mongoose.model("Usuario", new mongoose.Schema({
   nombre: String,
   ubicacion: String,
@@ -34,16 +35,18 @@ const Usuario = mongoose.model("Usuario", new mongoose.Schema({
   }]
 }));
 
+// Usuarios registrados
 const UsuarioRegistrado = mongoose.model("UsuarioRegistrado", new mongoose.Schema({
   usuario: String,
   contraseña: String
 }));
 
-// Agregamos modelo Articulo
+// Artículos (nuevo)
 const Articulo = mongoose.model("Articulo", new mongoose.Schema({
   nombre: { type: String, required: true },
   proveedor: { type: String, required: true },
   area: { type: String, required: true },
+  unidad: { type: String, required: true },
   precio: { type: Number, required: true }
 }));
 
@@ -168,9 +171,10 @@ app.delete("/eliminar-usuario/:id", async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Rutas para Artículos (NUEVO)
+// Rutas para Artículos (Nuevo)
 // -------------------------------------------------------------
 
+// Obtener todos los artículos
 app.get("/articulos", async (req, res) => {
   try {
     const articulos = await Articulo.find();
@@ -181,10 +185,11 @@ app.get("/articulos", async (req, res) => {
   }
 });
 
+// Crear un nuevo artículo
 app.post("/articulos", async (req, res) => {
   try {
-    const { nombre, proveedor, area, precio } = req.body;
-    const nuevoArticulo = new Articulo({ nombre, proveedor, area, precio });
+    const { nombre, proveedor, area, unidad, precio } = req.body;
+    const nuevoArticulo = new Articulo({ nombre, proveedor, area, unidad, precio });
     await nuevoArticulo.save();
     res.send("✅ Artículo creado correctamente");
   } catch (error) {
@@ -193,17 +198,19 @@ app.post("/articulos", async (req, res) => {
   }
 });
 
+// Editar artículo existente
 app.put("/articulos/:id", async (req, res) => {
   try {
-    const { nombre, proveedor, area, precio } = req.body;
-    await Articulo.findByIdAndUpdate(req.params.id, { nombre, proveedor, area, precio });
-    res.send("✅ Artículo modificado correctamente");
+    const { nombre, proveedor, area, unidad, precio } = req.body;
+    await Articulo.findByIdAndUpdate(req.params.id, { nombre, proveedor, area, unidad, precio });
+    res.send("✅ Artículo actualizado correctamente");
   } catch (error) {
     console.error(error);
-    res.status(500).send("❌ Error al modificar artículo");
+    res.status(500).send("❌ Error al actualizar artículo");
   }
 });
 
+// Eliminar artículo
 app.delete("/articulos/:id", async (req, res) => {
   try {
     await Articulo.findByIdAndDelete(req.params.id);
@@ -215,7 +222,7 @@ app.delete("/articulos/:id", async (req, res) => {
 });
 
 // -------------------------------------------------------------
-// Ruta para cualquier otro recurso que no exista
+// Ruta para recursos no encontrados (404)
 // -------------------------------------------------------------
 
 app.use((req, res) => {
@@ -228,5 +235,5 @@ app.use((req, res) => {
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
-  console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
+  console.log(`🚀 Servidor corriendo en el puerto ${PORT}`);
 });
