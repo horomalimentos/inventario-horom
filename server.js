@@ -10,15 +10,18 @@ app.use(cors());
 // Hacer pública la carpeta donde estarán los archivos HTML
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Conexión a MongoDB (ahora usando tu conexión en la nube, no localhost)
+// Conexión a MongoDB
 mongoose.connect(process.env.MONGODB_URI || "mongodb+srv://horomalimentos:Pelon93.@cluster0.gizie9z.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0", {
   useNewUrlParser: true,
   useUnifiedTopology: true
 }).then(() => console.log("✅ Conectado a MongoDB"))
   .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
-// Definir esquemas
-const usuarioSchema = new mongoose.Schema({
+// -------------------------------------------------------------
+// Modelos
+// -------------------------------------------------------------
+
+const Usuario = mongoose.model("Usuario", new mongoose.Schema({
   nombre: String,
   ubicacion: String,
   area: String,
@@ -29,22 +32,25 @@ const usuarioSchema = new mongoose.Schema({
     fecha: { type: Date, default: Date.now },
     accion: String
   }]
-});
+}));
 
-const usuarioRegistroSchema = new mongoose.Schema({
+const UsuarioRegistrado = mongoose.model("UsuarioRegistrado", new mongoose.Schema({
   usuario: String,
   contraseña: String
-});
+}));
 
-// Modelos
-const Usuario = mongoose.model("Usuario", usuarioSchema);
-const UsuarioRegistrado = mongoose.model("UsuarioRegistrado", usuarioRegistroSchema);
+// Agregamos modelo Articulo
+const Articulo = mongoose.model("Articulo", new mongoose.Schema({
+  nombre: { type: String, required: true },
+  proveedor: { type: String, required: true },
+  area: { type: String, required: true },
+  precio: { type: Number, required: true }
+}));
 
 // -------------------------------------------------------------
 // Rutas para Inventarios
 // -------------------------------------------------------------
 
-// Guardar un nuevo inventario
 app.post("/guardar-nombre", async (req, res) => {
   try {
     const usuario = new Usuario(req.body);
@@ -56,7 +62,6 @@ app.post("/guardar-nombre", async (req, res) => {
   }
 });
 
-// Obtener todos los inventarios
 app.get("/nombres", async (req, res) => {
   try {
     const inventarios = await Usuario.find().sort({ creadoEn: -1 });
@@ -67,7 +72,6 @@ app.get("/nombres", async (req, res) => {
   }
 });
 
-// Editar inventario completo
 app.put("/editar-nombre/:id", async (req, res) => {
   try {
     const { articulos, usuario } = req.body;
@@ -82,7 +86,6 @@ app.put("/editar-nombre/:id", async (req, res) => {
   }
 });
 
-// Editar solo un artículo del inventario
 app.put("/editar-articulo/:id", async (req, res) => {
   try {
     const { articulo, cantidad, usuario } = req.body;
@@ -97,7 +100,6 @@ app.put("/editar-articulo/:id", async (req, res) => {
   }
 });
 
-// Eliminar inventario
 app.delete("/eliminar-nombre/:id", async (req, res) => {
   try {
     await Usuario.findByIdAndDelete(req.params.id);
@@ -112,7 +114,6 @@ app.delete("/eliminar-nombre/:id", async (req, res) => {
 // Rutas para Usuarios Registrados
 // -------------------------------------------------------------
 
-// Obtener lista de usuarios registrados
 app.get("/usuarios-registrados", async (req, res) => {
   try {
     const usuarios = await UsuarioRegistrado.find({}, 'usuario');
@@ -123,7 +124,6 @@ app.get("/usuarios-registrados", async (req, res) => {
   }
 });
 
-// Validar usuario registrado
 app.post("/validar-usuario", async (req, res) => {
   try {
     const { usuario, contraseña } = req.body;
@@ -135,7 +135,6 @@ app.post("/validar-usuario", async (req, res) => {
   }
 });
 
-// Agregar nuevo usuario registrado
 app.post("/nuevo-usuario", async (req, res) => {
   try {
     const nuevoUsuario = new UsuarioRegistrado(req.body);
@@ -147,7 +146,6 @@ app.post("/nuevo-usuario", async (req, res) => {
   }
 });
 
-// Modificar contraseña de un usuario
 app.put("/modificar-usuario/:id", async (req, res) => {
   try {
     const { contraseña } = req.body;
@@ -159,7 +157,6 @@ app.put("/modificar-usuario/:id", async (req, res) => {
   }
 });
 
-// Eliminar un usuario registrado
 app.delete("/eliminar-usuario/:id", async (req, res) => {
   try {
     await UsuarioRegistrado.findByIdAndDelete(req.params.id);
@@ -171,13 +168,64 @@ app.delete("/eliminar-usuario/:id", async (req, res) => {
 });
 
 // -------------------------------------------------------------
+// Rutas para Artículos (NUEVO)
+// -------------------------------------------------------------
+
+app.get("/articulos", async (req, res) => {
+  try {
+    const articulos = await Articulo.find();
+    res.json(articulos);
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("❌ Error al obtener artículos");
+  }
+});
+
+app.post("/articulos", async (req, res) => {
+  try {
+    const { nombre, proveedor, area, precio } = req.body;
+    const nuevoArticulo = new Articulo({ nombre, proveedor, area, precio });
+    await nuevoArticulo.save();
+    res.send("✅ Artículo creado correctamente");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("❌ Error al crear artículo");
+  }
+});
+
+app.put("/articulos/:id", async (req, res) => {
+  try {
+    const { nombre, proveedor, area, precio } = req.body;
+    await Articulo.findByIdAndUpdate(req.params.id, { nombre, proveedor, area, precio });
+    res.send("✅ Artículo modificado correctamente");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("❌ Error al modificar artículo");
+  }
+});
+
+app.delete("/articulos/:id", async (req, res) => {
+  try {
+    await Articulo.findByIdAndDelete(req.params.id);
+    res.send("✅ Artículo eliminado correctamente");
+  } catch (error) {
+    console.error(error);
+    res.status(500).send("❌ Error al eliminar artículo");
+  }
+});
+
+// -------------------------------------------------------------
 // Ruta para cualquier otro recurso que no exista
 // -------------------------------------------------------------
+
 app.use((req, res) => {
   res.status(404).send("❌ Página no encontrada");
 });
 
+// -------------------------------------------------------------
 // Iniciar servidor
+// -------------------------------------------------------------
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
