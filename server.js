@@ -3,18 +3,24 @@ const mongoose = require("mongoose");
 const cors = require("cors");
 
 const app = express();
+const PORT = process.env.PORT || 8080;
+
 app.use(express.json());
 app.use(cors());
 
 // Conexión a MongoDB
-mongoose.connect("mongodb+srv://horomalimentos:Pelon93.@cluster0.gizie9z.mongodb.net/inventario", {
-  useNewUrlParser: true,
-  useUnifiedTopology: true
+mongoose.connect(process.env.MONGO_URL, {
+  dbName: "usuarios",
 }).then(() => console.log("✅ Conectado a MongoDB"))
 .catch(err => console.error("❌ Error de conexión a MongoDB:", err));
 
-// MODELOS
-const Usuario = mongoose.model("Usuario", new mongoose.Schema({
+// ✨ Ruta principal para verificar funcionamiento
+app.get("/", (req, res) => {
+  res.send("Servidor funcionando correctamente ✅");
+});
+
+// Esquemas y Modelos
+const usuarioSchema = new mongoose.Schema({
   nombre: String,
   ubicacion: String,
   area: String,
@@ -25,195 +31,101 @@ const Usuario = mongoose.model("Usuario", new mongoose.Schema({
     fecha: { type: Date, default: Date.now },
     accion: String
   }]
-}));
+});
 
-const UsuarioRegistrado = mongoose.model("UsuarioRegistrado", new mongoose.Schema({
+const usuarioRegistroSchema = new mongoose.Schema({
   usuario: String,
   contraseña: String
-}));
-
-const Articulo = mongoose.model("Articulo", new mongoose.Schema({
-  nombre: String,
-  proveedor: { type: String, default: "Desconocido" },
-  unidad: { type: String, default: "Desconocido" },
-  costo: { type: Number, default: 0 },
-  area: { type: String, default: "Desconocida" },
-  historialCostos: [{
-    costo: Number,
-    fecha: { type: Date, default: Date.now }
-  }]
-}));
-
-// ==========================
-// Rutas para Inventarios
-// ==========================
-app.post("/guardar-nombre", async (req, res) => {
-  try {
-    const usuario = new Usuario(req.body);
-    await usuario.save();
-    res.send(usuario._id);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al guardar inventario");
-  }
 });
 
-app.get("/nombres", async (req, res) => {
-  try {
-    const inventarios = await Usuario.find().sort({ creadoEn: -1 });
-    res.json(inventarios);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al obtener inventarios");
-  }
+const configuracionSchema = new mongoose.Schema({
+  ajusteHora: { type: Number, default: 0 }
 });
 
-app.put("/editar-nombre/:id", async (req, res) => {
-  try {
-    const { articulos, usuario } = req.body;
-    await Usuario.findByIdAndUpdate(req.params.id, {
-      articulos,
-      $push: { historial: { usuario, accion: 'Modificación Inventario Completo' } }
-    });
-    res.send("✅ Inventario actualizado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al actualizar inventario");
-  }
-});
+const Usuario = mongoose.model("Usuario", usuarioSchema);
+const UsuarioRegistrado = mongoose.model("UsuarioRegistrado", usuarioRegistroSchema);
+const Configuracion = mongoose.model("Configuracion", configuracionSchema);
 
-app.put("/editar-articulo/:id", async (req, res) => {
-  try {
-    const { articulo, cantidad, usuario } = req.body;
-    await Usuario.findByIdAndUpdate(req.params.id, {
-      $set: { [`articulos.${articulo}`]: cantidad },
-      $push: { historial: { usuario, accion: `Modificación Artículo: ${articulo}` } }
-    });
-    res.send("✅ Artículo actualizado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al actualizar artículo");
-  }
-});
+// Endpoints principales
 
-app.delete("/eliminar-nombre/:id", async (req, res) => {
-  try {
-    await Usuario.findByIdAndDelete(req.params.id);
-    res.send("✅ Inventario eliminado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al eliminar inventario");
-  }
-});
-
-// ==========================
-// Rutas para Usuarios
-// ==========================
 app.get("/usuarios-registrados", async (req, res) => {
-  try {
-    const usuarios = await UsuarioRegistrado.find({}, 'usuario');
-    res.json(usuarios);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al obtener usuarios registrados");
-  }
-});
-
-app.post("/validar-usuario", async (req, res) => {
-  try {
-    const { usuario, contraseña } = req.body;
-    const user = await UsuarioRegistrado.findOne({ usuario, contraseña });
-    res.json({ valido: !!user });
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al validar usuario");
-  }
+  const usuarios = await UsuarioRegistrado.find({}, 'usuario');
+  res.json(usuarios);
 });
 
 app.post("/nuevo-usuario", async (req, res) => {
-  try {
-    const nuevoUsuario = new UsuarioRegistrado(req.body);
-    await nuevoUsuario.save();
-    res.send("✅ Usuario agregado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al agregar usuario");
-  }
+  const nuevoUsuario = new UsuarioRegistrado(req.body);
+  await nuevoUsuario.save();
+  res.send("✅ Usuario agregado");
+});
+
+app.post("/validar-usuario", async (req, res) => {
+  const { usuario, contraseña } = req.body;
+  const user = await UsuarioRegistrado.findOne({ usuario, contraseña });
+  res.json({ valido: !!user });
 });
 
 app.put("/modificar-usuario/:id", async (req, res) => {
-  try {
-    const { contraseña } = req.body;
-    await UsuarioRegistrado.findByIdAndUpdate(req.params.id, { contraseña });
-    res.send("✅ Contraseña modificada correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al modificar contraseña");
-  }
+  const { contraseña } = req.body;
+  await UsuarioRegistrado.findByIdAndUpdate(req.params.id, { contraseña });
+  res.send("✅ Contraseña modificada");
 });
 
 app.delete("/eliminar-usuario/:id", async (req, res) => {
-  try {
-    await UsuarioRegistrado.findByIdAndDelete(req.params.id);
-    res.send("✅ Usuario eliminado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al eliminar usuario");
-  }
+  await UsuarioRegistrado.findByIdAndDelete(req.params.id);
+  res.send("✅ Usuario eliminado");
 });
 
-// ==========================
-// Rutas para Artículos
-// ==========================
-app.get("/articulos", async (req, res) => {
-  try {
-    const articulos = await Articulo.find();
-    res.json(articulos);
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al obtener artículos");
-  }
+app.post("/guardar-nombre", async (req, res) => {
+  const usuario = new Usuario(req.body);
+  await usuario.save();
+  res.send(usuario._id);
 });
 
-app.post("/nuevo-articulo", async (req, res) => {
-  try {
-    const { nombre, proveedor, unidad, costo, area } = req.body;
-    const articulo = new Articulo({ nombre, proveedor, unidad, costo, area, historialCostos: [{ costo }] });
-    await articulo.save();
-    res.send("✅ Artículo agregado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al agregar artículo");
-  }
+app.get("/nombres", async (req, res) => {
+  const inventarios = await Usuario.find().sort({ creadoEn: -1 });
+  res.json(inventarios);
+});
+
+app.put("/editar-nombre/:id", async (req, res) => {
+  const { articulos, usuario } = req.body;
+  await Usuario.findByIdAndUpdate(req.params.id, {
+    articulos,
+    $push: { historial: { usuario, accion: "Modificación Inventario Completo" } }
+  });
+  res.send("✅ Inventario actualizado");
 });
 
 app.put("/editar-articulo/:id", async (req, res) => {
-  try {
-    const { costo } = req.body;
-    await Articulo.findByIdAndUpdate(req.params.id, {
-      $set: { costo },
-      $push: { historialCostos: { costo } }
-    });
-    res.send("✅ Costo actualizado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al actualizar artículo");
-  }
+  const { articulo, cantidad, usuario } = req.body;
+  await Usuario.findByIdAndUpdate(req.params.id, {
+    $set: { [`articulos.${articulo}`]: cantidad },
+    $push: { historial: { usuario, accion: `Modificación Artículo: ${articulo}` } }
+  });
+  res.send("✅ Artículo actualizado");
 });
 
-app.delete("/eliminar-articulo/:id", async (req, res) => {
-  try {
-    await Articulo.findByIdAndDelete(req.params.id);
-    res.send("✅ Artículo eliminado correctamente");
-  } catch (error) {
-    console.error(error);
-    res.status(500).send("❌ Error al eliminar artículo");
-  }
+app.delete("/eliminar-nombre/:id", async (req, res) => {
+  await Usuario.findByIdAndDelete(req.params.id);
+  res.send("✅ Inventario eliminado");
 });
 
-// ==========================
+// Configuración Horario
+app.get("/configuracion", async (req, res) => {
+  const config = await Configuracion.findOne();
+  res.json(config || { ajusteHora: 0 });
+});
 
-const PORT = process.env.PORT || 3000;
+app.put("/configuracion", async (req, res) => {
+  const { ajusteHora } = req.body;
+  let config = await Configuracion.findOne();
+  if (!config) config = new Configuracion();
+  config.ajusteHora = ajusteHora;
+  await config.save();
+  res.send("✅ Configuración actualizada");
+});
+
+// Iniciar servidor
 app.listen(PORT, () => {
   console.log(`🚀 Servidor escuchando en el puerto ${PORT}`);
 });
